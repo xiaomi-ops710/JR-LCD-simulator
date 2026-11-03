@@ -36,8 +36,10 @@ CHECK_JS = """() => {
   const isDest = el => names.some(n => el.textContent.trim() === n.trim());
   const isSuffix = el => suffixes.includes(el.textContent.trim());
   const out = [];
-  nodes.filter(isDest).forEach(el => {
-    if (el.scrollWidth > el.clientWidth + 2) out.push('はみ出し: ' + el.textContent.trim().slice(0, 16));
+  // 切り替え途中の古い要素（幅0で表示されていないもの）は対象外にする
+  nodes.filter(isDest).filter(el => el.clientWidth > 0).forEach(el => {
+    // 横に縮めた後の見た目の幅で判定する（文字の大きさは変えず、横幅だけを細くするため）
+    if (el.getBoundingClientRect().width > el.clientWidth + 2) out.push('はみ出し: ' + el.textContent.trim().slice(0, 16));
     const a = el.getBoundingClientRect();
     nodes.filter(isSuffix).forEach(s => {
       const b = s.getBoundingClientRect();

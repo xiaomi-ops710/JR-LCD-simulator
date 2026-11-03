@@ -544,15 +544,23 @@
       document.getElementById('phaseBtnLabel').textContent = phaseLabels[state.runningPhase];
     }
 
-    /* 要素の幅に収まるまで文字を小さくする（実際の幅で測るので、どの言語・長さでも隠れない） */
+    /* 文字の大きさは変えず、入らないときだけ横幅を細くして収める（実機の表示に近い見え方）
+       ・横方向だけ縮める（scaleX）ので、文字の高さ・太さは保たれる
+       ・縮めた分だけ、後ろに続く「方面」などの位置を詰める
+       ・縮みすぎると読めないので、下限（45%）より細くはしない */
     function fitTextToBox(el) {
-      const min = 9; // px。これ以上は小さくしない
-      let size = parseFloat(getComputedStyle(el).fontSize);
+      const MIN_SCALE = 0.45;
+      el.style.transform = '';
+      el.style.transformOrigin = '';
+      el.style.marginRight = '';
       el.style.whiteSpace = 'nowrap';
-      while (el.scrollWidth > el.clientWidth + 1 && size > min) {
-        size -= 0.5;
-        el.style.fontSize = size + 'px';
-      }
+      const available = el.clientWidth;   // 行の中で使える幅（flexで縮まった後の幅）
+      const natural = el.scrollWidth;     // 文字そのものの幅
+      if (!available || !natural || natural <= available + 1) return;
+      const scale = Math.max(MIN_SCALE, available / natural);
+      el.style.transformOrigin = 'left center';
+      el.style.transform = `scaleX(${scale.toFixed(3)})`;
+      el.style.marginRight = `${-(natural * (1 - scale)).toFixed(1)}px`;
     }
 
     function fitAllDestinations() {
