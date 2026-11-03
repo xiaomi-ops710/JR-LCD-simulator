@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JR東日本 E233系/E235系 車内案内ディスプレイ (VIS) 完全再現シミュレーター</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: BIZ UDPGothic / Noto Sans JP / Roboto / Material Symbols Rounded -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=M+PLUS+1p:wght@500;700;800;900&family=Noto+Sans+JP:wght@500;700;800;900&family=Roboto:ital,wght@0,500;0,700;0,900;1,700;1,900&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+  <!-- Tone.js for authentic on-board chime & emergency alarm synthesis -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="min-h-screen flex flex-col justify-between pb-8">
+
+  <!-- ==========================================================
+       MATERIAL DESIGN 3 TOP APP BAR & LINE-BASED NAVIGATION
+       ========================================================== -->
+  <header id="appToolbar" class="sticky top-0 z-50 bg-[#111820]/95 backdrop-blur-md border-b border-slate-800 px-3 sm:px-6 py-2.5 transition-all">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2.5">
+      <!-- App Title & Active Station Badge -->
+      <div class="flex items-center gap-3">
+        <div id="topBadgeIcon" class="w-10 h-10 rounded-xl bg-[#77c043] text-slate-950 font-black text-xs flex flex-col items-center justify-center leading-none shadow-md border border-white/30">
+          <span class="text-[9px]">JY</span>
+          <span class="text-sm">01</span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-sm sm:text-base font-extrabold tracking-tight text-white">
+              JR東日本 車内案内ディスプレイ (VIS / トレインビジョン) 完全再現
+            </h1>
+            <span class="hidden lg:inline-flex items-center gap-1 text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+              <span class="material-symbols-rounded" style="font-size:14px;">verified</span>
+              路線別切替・全12画面モード対応
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">
+            路線を選ぶだけで、その路線固有のヘッダー・種別停車駅図・12両グリーン車ホーム図・ドア開画面・動画シーケンスを忠実再現
+          </p>
+        </div>
+      </div>
+
+      <!-- Material 3 Action Buttons -->
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button id="btnVideoDemo" data-click="toggleVideoSequenceDemo" data-click-args='[]' class="m3-btn-filled bg-amber-500 hover:bg-amber-400 text-slate-950 shadow" title="動画・実写と同じ順序で画面と放送を自動進行します">
+          <span class="material-symbols-rounded">movie</span>
+          <span id="videoDemoText">実車シーケンス再生: OFF</span>
+        </button>
+
+        <button id="btnAutoRun" data-click="toggleAutoSimulation" data-click-args='[]' class="m3-btn-filled bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow">
+          <span class="material-symbols-rounded">directions_subway</span>
+          <span id="autoRunText">自動走行: OFF</span>
+        </button>
+
+        <button data-click="playAnnouncement" data-click-args='[]' class="m3-btn-tonal" title="チャイム＆自動放送 (日・英)">
+          <span class="material-symbols-rounded">campaign</span>
+          <span>車内放送</span>
+        </button>
+
+        <button data-click="triggerEmergencyStop" data-click-args='[]' class="m3-btn-filled bg-red-600 hover:bg-red-500 text-white shadow" title="急停車全画面警告を表示">
+          <span class="material-symbols-rounded">emergency_home</span>
+          <span>急停車</span>
+        </button>
+
+        <button data-click="toggleThemeMode" data-click-args='[]' class="m3-btn-tonal !px-2.5" title="ダーク/ライトテーマ切替">
+          <span id="themeIcon" class="material-symbols-rounded">light_mode</span>
+        </button>
+
+        <button data-click="toggleFullscreenDisplay" data-click-args='[]' class="m3-btn-tonal !px-2.5" title="モニター全画面表示">
+          <span class="material-symbols-rounded">fullscreen</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ==========================================================
+         STEP 1: SELECT A JR LINE (路線を選ぶと自動で画面・列車が出ます)
+         ========================================================== -->
+    <div class="max-w-7xl mx-auto mt-2.5 pt-2 border-t border-slate-800/80 flex flex-col gap-2">
+      <div class="flex items-center gap-2 overflow-x-auto pb-1">
+        <span class="text-[11px] font-bold text-emerald-400 flex items-center gap-1 whitespace-nowrap">
+          <span class="material-symbols-rounded" style="font-size:16px;">route</span>
+          ① 路線を選択:
+        </span>
+
+        <button data-click="selectLine" data-click-args='["JY"]' id="lineBtn_JY" class="line-card-btn active">
+          <span class="w-6 h-6 rounded-md bg-[#77c043] text-slate-950 font-black text-xs flex items-center justify-center shadow">JY</span>
+          <div class="text-left">
+            <div class="text-xs font-extrabold leading-tight">山手線</div>
+            <div class="text-[10px] text-slate-400 leading-none">カーブ図・環状図・お知らせ</div>
+          </div>
+        </button>
+
+        <button data-click="selectLine" data-click-args='["JC"]' id="lineBtn_JC" class="line-card-btn">
+          <span class="w-6 h-6 rounded-md bg-[#eb5c01] text-white font-black text-xs flex items-center justify-center shadow">JC</span>
+          <div class="text-left">
+            <div class="text-xs font-extrabold leading-tight">中央線快速</div>
+            <div class="text-[10px] text-slate-400 leading-none">通勤特快・6種別図・12両ホーム</div>
+          </div>
+        </button>
+
+        <button data-click="selectLine" data-click-args='["JB"]' id="lineBtn_JB" class="line-card-btn">
+          <span class="w-6 h-6 rounded-md bg-[#ffd400] text-slate-950 font-black text-xs flex items-center justify-center shadow">JB</span>
+          <div class="text-left">
+            <div class="text-xs font-extrabold leading-tight">中央・総武線各駅停車</div>
+            <div class="text-[10px] text-slate-400 leading-none">秋葉原 JB-19・矩形ブロック図</div>
+          </div>
+        </button>
+
+        <button data-click="selectLine" data-click-args='["JE"]' id="lineBtn_JE" class="line-card-btn">
+          <span class="w-6 h-6 rounded-md bg-[#a62223] text-white font-black text-xs flex items-center justify-center shadow">JE</span>
+          <div class="text-left">
+            <div class="text-xs font-extrabold leading-tight">京葉線</div>
+            <div class="text-[10px] text-slate-400 leading-none">幕張豊砂 JE13・直線バー</div>
+          </div>
+        </button>
+
+        <button data-click="selectLine" data-click-args='["JK"]' id="lineBtn_JK" class="line-card-btn">
+          <span class="w-6 h-6 rounded-md bg-[#00a7e3] text-white font-black text-xs flex items-center justify-center shadow">JK</span>
+          <div class="text-left">
+            <div class="text-xs font-extrabold leading-tight">京浜東北・根岸線</div>
+            <div class="text-[10px] text-slate-400 leading-none">品川〜東京・直線バー</div>
+          </div>
+        </button>
+      </div>
+
+      <!-- STEP 2: SUB-SCENES / TRAINS FOR THE SELECTED LINE -->
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+        <span class="text-[11px] font-bold text-slate-400 flex items-center gap-1 whitespace-nowrap">
+          <span class="material-symbols-rounded" style="font-size:15px;">train</span>
+          ② 列車・場面:
+        </span>
+        <div id="lineSubSceneChips" class="flex items-center gap-1.5">
+          <!-- Populated dynamically based on selected Line -->
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==========================================================
+       MAIN DISPLAY AREA (THE 16:9 JR EAST LCD MONITOR)
+       ========================================================== -->
+  <main class="flex-1 flex flex-col items-center justify-center px-2 sm:px-6 py-3 max-w-6xl mx-auto w-full">
+
+    <!-- Metallic Wall & LCD Bezel Wrapper -->
+    <div id="bezelWrapper" class="lcd-bezel-wrapper w-full">
+      <div class="lcd-bezel-inner">
+
+        <!-- 16:9 Container Query LCD Viewport -->
+        <div id="lcdScreen" class="lcd-viewport">
+          <!-- Glare & Subpixel Overlays -->
+          <div id="lcdGlareLayer" class="lcd-glare"></div>
+          <div id="lcdSubpixelLayer" class="lcd-subpixel"></div>
+
+          <!-- ==========================================
+               UPPER HEADER (36.8% Height)
+               Supports:
+               - Style A: Polygon (E233 Keiyo)
+               - Style B: Pillar (Yamanote Video & Photos, with 3-letter code TYO/KND)
+               - Style C: Whitebox (E231-500 / E233 Chuo & Sobu IMG_4441-4449)
+               ========================================== -->
+          <div id="lcdHeader" class="lcd-header">
+
+            <!-- HEADER STYLE A & B CONTAINER -->
+            <div id="headerDarkContainer" class="w-full h-full flex">
+              <!-- STYLE A: E233 Slanted Polygon -->
+              <div id="headerLeftPolygon" class="header-left-polygon hidden" style="background: linear-gradient(180deg, #a62223 0%, #8d1b1c 100%);">
+                <div id="trainTypeBadge" class="train-type-badge">
+                  <div id="rollTrainType" class="roll-stage">
+                    <span class="train-type-text" style="color: #0871a4;">各駅停車</span>
+                  </div>
+                </div>
+                <div class="destination-area-polygon">
+                  <div id="rollDestPolygon" class="roll-stage"></div>
+                </div>
+              </div>
+
+              <!-- STYLE B: Yamanote Vertical Pillar -->
+              <div id="headerLeftPillar" class="header-left-pillar-wrap">
+                <div class="pillar-dest-box">
+                  <div id="rollDestPillar" class="roll-stage align-bottom-left"></div>
+                </div>
+                <div id="pillarColorBar" class="pillar-color-bar"></div>
+              </div>
+
+              <!-- HEADER MAIN RIGHT SECTION (for Style A & B) -->
+              <div class="header-main-box">
+                <div class="header-top-row">
+                  <div class="next-label-slot">
+                    <div id="rollNextStatus" class="roll-stage align-left">
+                      <span class="next-label">ただいま</span>
+                    </div>
+                  </div>
+
+                  <!-- Clock Display -->
+                  <div id="clockGroup" class="clock-group">
+                    <span id="clockLabel" class="clock-label hidden">現在時刻</span>
+                    <div id="clockValue" class="clock-box-pillar">00:00</div>
+                  </div>
+
+                  <!-- Car Number (E233 Boxed Style) -->
+                  <div id="carBadgeE233" class="car-badge-group hidden">
+                    <div id="carNumberBox" class="car-number-box">1</div>
+                    <div id="carNumberLabel" class="car-number-label">号車</div>
+                  </div>
+
+                  <!-- Car Number (Yamanote Clean Style) -->
+                  <div id="carBadgePillar" class="car-pillar-group"></div>
+                </div>
+
+                <!-- Main Station Number Badge (Supports 3-Letter Code TYO/KND!) + Huge Rolling Station Name -->
+                <div class="header-station-row">
+                  <div id="mainStationBadgeOuter" class="station-num-large-outer">
+                    <!-- Populated dynamically to support both standard square & 3-letter TYO/KND tall badge -->
+                  </div>
+
+                  <div class="main-station-name-wrap">
+                    <div id="rollMainStation" class="roll-stage">
+                      <span class="main-station-name">東　京</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- HEADER STYLE C: WHITE-BOX CHUO / SOBU HEADER (IMG_4441, 4442, 4445, 4446, 4448, 4449) -->
+            <div id="headerWhiteboxContainer" class="header-whitebox-layout hidden">
+              <!-- Left Column: Outlined 2-Line Train Type + Bottom Status (次は / ただいま / まもなく / Arriving at) -->
+              <div class="w-[19.0cqw] h-full flex flex-col justify-between pl-[1.4cqw] pr-[0.4cqw] pt-[1.1cqh] pb-[1.6cqh] flex-shrink-0">
+                <div id="wbTrainTypeSlot" class="h-[22.2cqh] flex items-start justify-start overflow-hidden">
+                  <!-- Outlined 2x2 Kanji or Condensed English -->
+                </div>
+                <div class="h-[9.2cqh] flex items-end justify-end pr-[0.6cqw]">
+                  <div id="rollWbNextStatus" class="roll-stage align-left"></div>
+                </div>
+              </div>
+
+              <!-- Center Column: Top Destination ("東京 行" / "三鷹 行" / "for Tōkyō") + Crisp White Recessed Station Box -->
+              <div class="w-[61.5cqw] h-full flex flex-col justify-end pb-[1.8cqh] flex-shrink-0">
+                <div class="h-[8.8cqh] flex items-center pl-[5.8cqw] pb-[0.3cqh] overflow-hidden">
+                  <div id="rollWbDest" class="roll-stage align-left"></div>
+                </div>
+                <!-- White Station Box with 3D Frame -->
+                <div class="w-full h-[25.0cqh] bg-white border-t-[0.45cqh] border-l-[0.35cqw] border-[#374151] border-b-[0.35cqh] border-r-[0.3cqw] border-b-[#d1d5db] border-r-[#d1d5db] shadow-inner flex items-center px-[1.4cqw] relative overflow-hidden">
+                  <div id="wbStationBadgeSlot" class="flex-shrink-0 flex items-center justify-center z-10"></div>
+                  <div class="flex-1 h-full flex items-center justify-center overflow-hidden px-[0.8cqw]">
+                    <div id="rollWbMainStation" class="roll-stage"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column: White Rounded Car Box ("10 号車") + White Rounded Clock Pill ("8:36") -->
+              <div class="w-[19.5cqw] h-full flex flex-col justify-between items-end pr-[1.6cqw] py-[1.6cqh] flex-shrink-0">
+                <div id="wbCarBoxArea" class="flex flex-col items-center"></div>
+                <div class="flex flex-col items-end">
+                  <span id="wbClockLabel" class="text-[#111827] font-bold text-[2.25cqw] leading-none mb-[0.35cqh] mr-[0.3cqw] hidden">現在時刻</span>
+                  <div class="bg-white rounded-[0.8cqw] px-[1.4cqw] py-[0.45cqh] min-w-[11.8cqw] flex items-center justify-center shadow-sm">
+                    <span id="wbClockValue" class="font-['Roboto'] font-bold text-[#111827] text-[4.35cqw] leading-none tracking-tight">8:36</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ==========================================
+               LOWER BODY (63.2% Height)
+               10 Authentic JR East Screen Layouts
+               ========================================== -->
+          <div class="lcd-body">
+
+            <!-- 1. STRAIGHT BAR ROUTE MAP (Photo 1: Keiyo Line etc.) -->
+            <div id="viewStraightRoute" class="w-full h-full relative hidden">
+              <div class="route-bar-layer">
+                <svg id="routeBarSvg" viewBox="0 0 900 98" preserveAspectRatio="none" class="w-full h-full overflow-visible"></svg>
+              </div>
+              <div id="routeColumnsContainer" class="route-columns-container"></div>
+              <div id="bottomDisclaimerStraight" class="bottom-disclaimer">
+                のりかえ、待ち合わせ時間は含まれません。電車により多少時間が異なります。
+              </div>
+            </div>
+
+            <!-- 2. YAMANOTE FULL LOOP ROUTE MAP (IMG_4439 & Video 00:19 / 00:43 with English Slanted Support) -->
+            <div id="viewYamanoteLoop" class="w-full h-full relative hidden">
+              <div id="yamanoteLoopContainer" class="w-full h-full relative"></div>
+              <div id="bottomDisclaimerLoop" class="bottom-disclaimer" style="left: 1.8cqw; right: auto;">
+                のりかえ、待ち合せ時間は含まれません。電車により多少時間が異なります。
+              </div>
+            </div>
+
+            <!-- 3. YAMANOTE CURVED ARC (LEFT-TO-RIGHT: IMG_4438_2 Sugamo) -->
+            <div id="viewYamanoteCurve" class="w-full h-full relative hidden">
+              <div id="yamanoteCurveContainer" class="w-full h-full relative"></div>
+              <div id="bottomDisclaimerCurve" class="bottom-disclaimer">
+                のりかえ、待ち合せ時間は含まれません。電車により多少時間が異なります。
+              </div>
+            </div>
+
+            <!-- 4. YAMANOTE CURVED ARC (RIGHT-TO-LEFT: Video 00:00 Tokyo & 00:31 Kanda) -->
+            <div id="viewYamanoteCurveRtl" class="w-full h-full relative hidden">
+              <div id="yamanoteCurveRtlContainer" class="w-full h-full relative"></div>
+              <div class="bottom-disclaimer" style="left: 1.8cqw; right: auto;">
+                のりかえ、待ち合せ時間は含まれません。電車により多少時間が異なります。
+              </div>
+            </div>
+
+            <!-- 5. YAMANOTE NOTICE INFORMATION SCREEN (Video 00:07〜00:18 お知らせ Information) -->
+            <div id="viewNoticeInfo" class="w-full h-full relative hidden bg-[#e4e9ee]">
+              <div id="noticeInfoContainer" class="w-full h-full"></div>
+            </div>
+
+            <!-- 6. E233/E235 PLATFORM STOPPING POSITION & DOOR GUIDE (IMG_4437 Ōtsuka) -->
+            <div id="viewPlatformStop" class="w-full h-full relative hidden flex-col justify-between">
+              <div id="platformStopContainer" class="w-full h-full flex flex-col justify-between"></div>
+            </div>
+
+            <!-- 7. SOBU LINE YELLOW RECTANGULAR BLOCK ROUTE MAP (IMG_4441 秋葉原 JB-19) -->
+            <div id="viewSobuRect" class="w-full h-full relative hidden bg-white">
+              <div id="sobuRectContainer" class="w-full h-full relative"></div>
+            </div>
+
+            <!-- 8. CHUO LINE 6-TRAIN-TYPE STOPPING PATTERN MAP (IMG_4442 通勤特快 高尾) -->
+            <div id="viewChuoStopping" class="w-full h-full relative hidden bg-[#d8e0ed]">
+              <div id="chuoStoppingContainer" class="w-full h-full relative"></div>
+            </div>
+
+            <!-- 9. CHUO LINE 12-CAR GREEN CAR PLATFORM & TRANSFER MAP (IMG_4446 八王子) -->
+            <div id="viewChuoPlatform" class="w-full h-full relative hidden bg-[#d8e0ed]">
+              <div id="chuoPlatformContainer" class="w-full h-full relative"></div>
+            </div>
+
+            <!-- 10. CHUO LINE LARGE DOOR OPENING ILLUSTRATION (IMG_4448 Hachiōji) -->
+            <div id="viewChuoDoor" class="w-full h-full relative hidden bg-[#d8e0ed]">
+              <div id="chuoDoorContainer" class="w-full h-full relative"></div>
+            </div>
+
+            <!-- 11. CHUO LINE DEDICATED TRANSFER GUIDE (IMG_4449 よつや) -->
+            <div id="viewChuoTransfer" class="w-full h-full relative hidden bg-[#d8e0ed]">
+              <div id="chuoTransferContainer" class="w-full h-full relative"></div>
+            </div>
+
+            <!-- 12. CHUO LINE PINK CAPSULE TRAIN INFORMATION (IMG_4445 東海道新幹線 遅延) -->
+            <div id="viewChuoTrainInfo" class="w-full h-full relative hidden bg-[#d8e0ed]">
+              <div id="chuoTrainInfoContainer" class="w-full h-full relative"></div>
+            </div>
+
+          </div>
+
+          <!-- ==========================================
+               FULL-SCREEN OVERLAY 1: JR EAST TRAIN OPERATION INFO
+               (運行情報 全画面忠実再現)
+               ========================================== -->
+          <div id="viewTrainInfoFull" class="absolute inset-0 z-40 hidden flex-col justify-between bg-[#e8eef5]">
+            <div class="h-[15cqh] bg-gradient-to-b from-[#2c333a] to-[#1b2025] border-b-[0.6cqh] border-[#d97706] flex items-center justify-between px-[3.5cqw]">
+              <div class="flex items-center gap-[1.5cqw]">
+                <span class="bg-[#f59e0b] text-slate-950 font-black text-[2.8cqw] px-[1.2cqw] py-[0.3cqh] rounded-[0.3cqw]">お知らせ</span>
+                <span class="text-white font-bold text-[4.5cqw] tracking-wide">運行情報</span>
+                <span class="text-slate-300 font-bold text-[2.4cqw] ml-[0.8cqw]">Train Information</span>
+              </div>
+              <div class="text-white font-bold text-[3.4cqw] font-['Roboto']" id="trainInfoClock">21:08</div>
+            </div>
+
+            <div class="flex-1 p-[3.2cqw] flex flex-col justify-between">
+              <div class="bg-white border-[0.3cqw] border-[#94a3b8] rounded-[0.8cqw] shadow-md overflow-hidden flex-1 flex flex-col">
+                <div class="bg-[#fef3c7] border-b-[0.25cqw] border-[#f59e0b] px-[2.5cqw] py-[1.4cqh] flex items-center justify-between">
+                  <span class="text-[#b45309] font-black text-[2.9cqw]">ただいま、以下の路線に遅れが出ています。</span>
+                  <span class="text-[#78350f] font-bold text-[1.8cqw]">Delays on the following lines</span>
+                </div>
+                <div class="divide-y divide-slate-300 flex-1 flex flex-col justify-around px-[2.5cqw]">
+                  <div class="flex items-center justify-between py-[1.2cqh]">
+                    <div class="flex items-center gap-[1.5cqw]">
+                      <span class="w-[3.4cqw] h-[5.2cqh] rounded-[0.35cqw] bg-[#eb5c01] text-white font-black text-[2.0cqw] flex items-center justify-center">JC</span>
+                      <span class="font-bold text-[3.6cqw] text-slate-900">中央線快速電車</span>
+                    </div>
+                    <div class="flex items-center gap-[2cqw]">
+                      <span class="bg-red-600 text-white font-black text-[2.5cqw] px-[1.4cqw] py-[0.3cqh] rounded">遅れ Delay</span>
+                      <span class="font-bold text-[2.8cqw] text-slate-800">東京〜高尾 (上下線)</span>
+                      <span class="font-bold text-[2.4cqw] text-slate-600">原因: 強風の影響</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between py-[1.2cqh]">
+                    <div class="flex items-center gap-[1.5cqw]">
+                      <span class="w-[3.4cqw] h-[5.2cqh] rounded-[0.35cqw] bg-[#00a7e3] text-white font-black text-[2.0cqw] flex items-center justify-center">JK</span>
+                      <span class="font-bold text-[3.6cqw] text-slate-900">京浜東北・根岸線</span>
+                    </div>
+                    <div class="flex items-center gap-[2cqw]">
+                      <span class="bg-amber-500 text-slate-950 font-black text-[2.5cqw] px-[1.4cqw] py-[0.3cqh] rounded">直通中止</span>
+                      <span class="font-bold text-[2.8cqw] text-slate-800">大宮〜大船 (全線)</span>
+                      <span class="font-bold text-[2.4cqw] text-slate-600">原因: 安全確認</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-[1.4cqh] flex items-center justify-between">
+                <span class="text-slate-700 font-bold text-[1.9cqw]">※詳しい情報は駅係員またはJR東日本アプリでご確認ください。</span>
+                <button data-click="closeTrainInfoScreen" data-click-args='[]' class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-[1.8cqw] px-[1.6cqw] py-[0.6cqh] rounded shadow">
+                  ✕ 通常画面に戻る
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ==========================================
+               FULL-SCREEN OVERLAY 2: EMERGENCY BRAKE WARNING
+               (急停車表示 全画面忠実再現)
+               ========================================== -->
+          <div id="viewEmergencyFull" class="absolute inset-0 z-40 hidden flex-col justify-between bg-[#fff8f6]">
+            <div class="h-[22cqh] emergency-banner-flash flex items-center justify-center gap-[2.5cqw] px-[4cqw] border-b-[0.8cqh] border-amber-400 shadow-lg">
+              <div class="w-[7.5cqw] h-[13cqh] bg-amber-400 text-slate-950 font-black text-[6cqw] rounded-[0.8cqw] flex items-center justify-center shadow">
+                !
+              </div>
+              <div class="text-center">
+                <div class="text-white font-black text-[6.8cqw] leading-none tracking-wider drop-shadow">
+                  急停車します
+                </div>
+                <div class="text-amber-300 font-black text-[2.8cqw] leading-tight mt-[0.6cqh] tracking-wide">
+                  Emergency Stop! / 紧急停车 / 급정차합니다
+                </div>
+              </div>
+            </div>
+
+            <div class="flex-1 flex items-center justify-center gap-[4cqw] px-[5cqw] bg-gradient-to-b from-white to-red-50">
+              <div class="w-[22cqw] h-[36cqh] bg-white border-[0.5cqw] border-red-600 rounded-[1.5cqw] shadow-lg flex flex-col items-center justify-center p-[1cqw] relative overflow-hidden">
+                <svg viewBox="0 0 160 160" class="w-full h-full">
+                  <rect x="10" y="12" width="140" height="8" fill="#475569" rx="3"/>
+                  <rect x="98" y="20" width="6" height="32" fill="#334155"/>
+                  <circle cx="101" cy="64" r="14" fill="none" stroke="#d97706" stroke-width="7"/>
+                  <circle cx="62" cy="62" r="16" fill="#1e293b"/>
+                  <path d="M38 145 L46 86 C48 78 74 78 78 86 L101 66 L108 74 L80 100 L86 145 Z" fill="#1e293b"/>
+                  <path d="M18 48 L32 58 M14 72 L30 76 M20 96 L34 92" stroke="#dc2626" stroke-width="5" stroke-linecap="round"/>
+                </svg>
+              </div>
+
+              <div class="flex-1 space-y-[1.8cqh]">
+                <div class="text-red-700 font-black text-[4.8cqw] leading-tight">
+                  強いブレーキがかかります
+                </div>
+                <div class="bg-amber-300/90 border-l-[1cqw] border-red-700 px-[2cqw] py-[1.4cqh] rounded-r-[0.8cqw] shadow-sm">
+                  <div class="text-slate-950 font-black text-[4.1cqw] leading-snug">
+                    つり革・手すりにおつかまりください
+                  </div>
+                  <div class="text-slate-800 font-bold text-[2.45cqw] mt-[0.5cqh]">
+                    Please hold on to a strap or handrail.
+                  </div>
+                </div>
+                <div class="text-slate-700 font-bold text-[2.2cqw]">
+                  お近くの皆さまも転倒にご注意ください。
+                </div>
+              </div>
+            </div>
+
+            <div class="h-[8cqh] bg-slate-900 flex items-center justify-between px-[3cqw] text-white">
+              <span class="font-bold text-[2cqw] text-amber-400">⚠️ 安全確認のため緊急停止中です</span>
+              <button data-click="closeEmergencyStop" data-click-args='[]' class="pointer-events-auto bg-red-600 hover:bg-red-500 text-white font-bold text-[1.8cqw] px-[1.5cqw] py-[0.5cqh] rounded">
+                通常表示へ復帰
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================================
+         MATERIAL DESIGN 3 CONTROL BAR (DRIVING, LAYOUT, ANIMATION)
+         ========================================================== -->
+    <div id="quickControlStrip" class="w-full mt-3.5 m3-surface p-3.5 sm:px-5 space-y-3">
+
+      <!-- Quick Interactive Station Selector Strip (直感的な駅ワンクリック移動バー) -->
+      <div class="flex items-center gap-2 pb-2.5 border-b border-slate-800/80 overflow-x-auto">
+        <span class="text-[11px] font-bold text-emerald-400 flex items-center gap-1 whitespace-nowrap">
+          <span class="material-symbols-rounded" style="font-size:16px;">pin_drop</span>
+          駅ダイレクト選択:
+        </span>
+        <div id="quickStationPills" class="flex items-center gap-1.5">
+          <!-- Populated dynamically with all stations in current route -->
+        </div>
+      </div>
+
+      <!-- Row 1: Station Navigation + Continuous Position Slider + Screen Layout Segmented Buttons -->
+      <div class="flex flex-wrap items-center justify-between gap-2.5">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button data-click="stepStation" data-click-args='[-1]' class="m3-btn-tonal !h-8 !px-3" title="前の駅へ">
+            <span class="material-symbols-rounded">skip_previous</span>
+            <span>前駅</span>
+          </button>
+          <button data-click="cycleRunningPhase" data-click-args='[]' id="btnPhaseCycle" class="m3-btn-filled bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 !h-8 !px-3">
+            <span class="material-symbols-rounded">sync_alt</span>
+            <span id="phaseBtnLabel">状態: ただいま (停車中)</span>
+          </button>
+          <button data-click="stepStation" data-click-args='[1]' class="m3-btn-tonal !h-8 !px-3" title="次の駅へ">
+            <span>次駅</span>
+            <span class="material-symbols-rounded">skip_next</span>
+          </button>
+
+          <!-- Continuous Train Position Slider -->
+          <div class="flex items-center gap-2 bg-slate-950/70 border border-slate-700/80 px-3 py-1 rounded-full ml-0.5">
+            <span class="material-symbols-rounded text-emerald-400" style="font-size:16px;">train</span>
+            <span class="text-[11px] font-bold text-slate-300">駅間位置</span>
+            <input id="sliderTrainProgress" type="range" min="0" max="100" value="0"
+                   oninput="onTrainProgressScrub(this.value)"
+                   class="w-20 sm:w-24 accent-emerald-500 cursor-pointer h-1.5" />
+            <span id="labelTrainProgress" class="text-[11px] font-mono text-emerald-400 w-8 text-right">0%</span>
+          </div>
+        </div>
+
+        <!-- Material 3 Segmented Buttons: Body Screen Layout (Grouped clearly) -->
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
+            <span class="material-symbols-rounded" style="font-size:15px;">tv_options_input_settings</span>
+            ③ 表示画面モード:
+          </span>
+          <div class="flex flex-wrap gap-1 bg-slate-950/70 p-1 rounded-2xl border border-slate-700/80">
+            <button data-click="setBodyLayout" data-click-args='["curve_rtl"]' id="layoutBtn_curve_rtl" class="m3-seg-btn !px-2.5 !py-1 text-[11px]">
+              カーブ(右→左・動画)
+            </button>
+            <button data-click="setBodyLayout" data-click-args='["curve"]' id="layoutBtn_curve" class="m3-seg-btn !px-2.5 !py-1 text-[11px]">
+              カーブ(左→右・巣鴨)
+            </button>
+            <button data-click="setBodyLayout" data-click-args='["loop"]' id="layoutBtn_loop" class="m3-seg-btn !px-2.5 !py-1 text-[11px]">
+              環状ループ
+            </button>
+            <button data-click="setBodyLayout" data-click-args='["notice_info"]' id="layoutBtn_notice_info" class="m3-seg-btn !px-2.5 !py-1 text-[11px]">
+              お知らせ(動画)
+            </button>
+            <button data-click="setBodyLayout" data-click-args='["sobu_rect"]' id="layoutBtn_sobu_rect" class="m3-seg-btn !px-2.5 !py-1 text-[11px]">
+              総武線ブロック(IMG_4441)
+            </button>
+            <button data-click="setBodyLayout" data-click-args='["chuo_stopping"]' id="layoutBtn_chuo_stopping" class="m3-seg-btn !px-2.5 !py-1 text-[11px]">
+              中央線種別図(IMG_4442)
+            </button>
+            <button data-click="setBodyLayout" data-click-args='["chuo_platform"]' id="layoutBtn_chuo_platform" class="m3-seg-btn !px-2.5 !py-1 text-[11px]">
+              12両ホーム・乗換(IMG_4446)
+            </button>
+            <button data-click="setBodyLayout" data-click-args='["chuo_door"]' id="layoutBtn_chuo_door" class="m3-seg-btn !px-2.5 !py-1 text-[11px]">
+              大型ドア案内(IMG_4448)
+            </button>
+            <button data-click="setBodyLayout" data-click-args='["chuo_transfer"]' id="layoutBtn_chuo_transfer" class="m3-seg-btn !px-2.5 !py-1 text-[11px]">
+              のりかえ専用(IMG_4449)
+            </button>
+            <button data-click="setBodyLayout" data-click-args='["chuo_train_info"]' id="layoutBtn_chuo_train_info" class="m3-seg-btn !px-2.5 !py-1 text-[11px]">
+              運行情報ピンク(IMG_4445)
+            </button>
+            <button data-click="setBodyLayout" data-click-args='["straight"]' id="layoutBtn_straight" class="m3-seg-btn !px-2.5 !py-1 text-[11px]">
+              直線バー(京葉等)
+            </button>
+            <button data-click="setBodyLayout" data-click-args='["platform"]' id="layoutBtn_platform" class="m3-seg-btn !px-2.5 !py-1 text-[11px]">
+              停止位置(大塚型)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Language Segmented Group + Authentic VIS Roll Animation Mode Selector -->
+      <div class="flex flex-wrap items-center justify-between gap-2.5 pt-2.5 border-t border-slate-800/80">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-[11px] text-slate-400 font-bold flex items-center gap-1">
+            <span class="material-symbols-rounded" style="font-size:16px;">translate</span>
+            表示言語:
+          </span>
+          <div class="m3-segmented">
+            <button data-click="setLanguage" data-click-args='["jp", true]' id="langBtn_jp" class="m3-seg-btn active">漢字</button>
+            <button data-click="setLanguage" data-click-args='["kana", true]' id="langBtn_kana" class="m3-seg-btn">ひらがな</button>
+            <button data-click="setLanguage" data-click-args='["en", true]' id="langBtn_en" class="m3-seg-btn">English</button>
+            <button data-click="setLanguage" data-click-args='["zh", true]' id="langBtn_zh" class="m3-seg-btn">中文</button>
+            <button data-click="setLanguage" data-click-args='["ko", true]' id="langBtn_ko" class="m3-seg-btn">한국어</button>
+          </div>
+
+          <label class="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-300 bg-slate-900/70 border border-slate-700/80 px-2.5 py-1 rounded-full cursor-pointer" title="ONにするとヘッダーが英語でも下部路線図の駅名を漢字に保ちます。OFFにすると動画00:43のように環状図も英語斜め表示になります">
+            <input id="chkCurveKanjiLock" type="checkbox" checked data-change="renderLCD" data-change-args='[false]' class="accent-emerald-500 w-3.5 h-3.5" />
+            <span>下部路線図の駅名を漢字固定</span>
+          </label>
+        </div>
+
+        <!-- Authentic VIS Animation Style & Auto-Cycle -->
+        <div class="flex flex-wrap items-center gap-2">
+          <select id="selectAnimStyle" onchange="updateAnimStyle(this.value)" class="m3-input !py-1 !px-2.5 !rounded-full text-xs">
+            <option value="wipe" selected>アニメ: 動画仕様ワイプ切替 (00:00〜00:44)</option>
+            <option value="scroll">アニメ: 機械式ロール切替 (下→上)</option>
+            <option value="instant">アニメ: 即時切替</option>
+          </select>
+
+          <button data-click="toggleAutoLangCycle" data-click-args='[]' id="btnAutoLang" class="m3-chip active">
+            <span class="material-symbols-rounded" style="font-size:15px;">schedule</span>
+            <span id="autoLangText">多言語自動切替: ON (3.0秒)</span>
+          </button>
+
+          <button data-click="toggleAutoPageCycle" data-click-args='[]' id="btnAutoPage" class="m3-chip" title="その路線固有の画面群を自動で順番に切り替えます">
+            <span class="material-symbols-rounded" style="font-size:15px;">autorenew</span>
+            <span id="autoPageText">画面自動ローテ: OFF</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================================
+         MATERIAL DESIGN 3 CUSTOMIZATION & EDITOR STUDIO
+         ========================================================== -->
+    <section id="controlDeck" class="w-full mt-4 m3-surface overflow-hidden">
+      <!-- Material 3 Primary Navigation Tabs -->
+      <div class="flex border-b border-slate-800 bg-slate-950/40 overflow-x-auto px-2">
+        <button data-click="switchTab" data-click-args='["presets"]' id="tabBtn_presets" class="px-4 py-3 text-xs sm:text-sm font-bold border-b-2 border-emerald-400 text-emerald-300 flex items-center gap-1.5 whitespace-nowrap">
+          <span class="material-symbols-rounded">tune</span>
+          路線プリセット & ヘッダー設定
+        </button>
+        <button data-click="switchTab" data-click-args='["platform"]' id="tabBtn_platform" class="px-4 py-3 text-xs sm:text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+          <span class="material-symbols-rounded">transfer_within_a_station</span>
+          停車位置・ホーム設備・出口カスタム (全駅対応)
+        </button>
+        <button data-click="switchTab" data-click-args='["stations"]' id="tabBtn_stations" class="px-4 py-3 text-xs sm:text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+          <span class="material-symbols-rounded">format_list_numbered</span>
+          駅一覧・所要時間・乗換編集
+        </button>
+        <button data-click="switchTab" data-click-args='["visual"]' id="tabBtn_visual" class="px-4 py-3 text-xs sm:text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+          <span class="material-symbols-rounded">display_settings</span>
+          時計・液晶パネル質感設定
+        </button>
+      </div>
+
+      <!-- TAB 1: LINE & HEADER SETTINGS -->
+      <div id="tabPanel_presets" class="p-4 sm:p-5 space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1 font-bold">ヘッダーデザイン様式</label>
+            <select id="selectHeaderStyle" data-change="updateHeaderStyleFromSelect" data-change-args='[]' class="m3-input w-full">
+              <option value="pillar">山手線 縦ライン型 (動画・3レター対応)</option>
+              <option value="whitebox">中央・総武線 白枠ボックス型 (IMG_4441〜4449)</option>
+              <option value="polygon">京葉・中央線 斜めポリゴン型 (E233標準)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1 font-bold">種別表示 (通勤特快 / 各駅停車)</label>
+            <div class="flex gap-1.5">
+              <input id="inputTrainType" type="text" value="各駅停車" data-input="updateHeaderFromInputs" data-input-args='[]' class="m3-input w-full" />
+              <input id="inputTrainTypeColor" type="color" value="#0871a4" data-input="updateHeaderFromInputs" data-input-args='[]' class="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 cursor-pointer p-0.5" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1 font-bold">行き先 / 方面 (日本語)</label>
+            <input id="inputDestination" type="text" value="上野・池袋" data-input="updateHeaderFromInputs" data-input-args='[]' class="m3-input w-full" />
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1 font-bold">路線カラー & ナンバリング記号</label>
+            <div class="flex gap-1.5">
+              <input id="inputLineColor" type="color" value="#77c043" data-input="updateHeaderFromInputs" data-input-args='[]' class="w-10 h-9 rounded-lg bg-slate-800 border border-slate-700 cursor-pointer p-0.5" />
+              <input id="inputLinePrefix" type="text" maxlength="3" value="JY" data-input="updateHeaderFromInputs" data-input-args='[]' class="m3-input w-full uppercase" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1 font-bold">直線バーの進行方向</label>
+            <select id="selectDirection" data-change="updateDirectionFromSelect" data-change-args='[]' class="m3-input w-full">
+              <option value="rtl">← 左方向へ進行 (右→左)</option>
+              <option value="ltr" selected>→ 右方向へ進行 (左→右)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Custom Notice / Train Info Text Editor -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-800">
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1 font-bold">運行情報テキスト (IMG_4445 ピンクカプセル画面用)</label>
+            <div class="flex gap-2">
+              <input id="inputDelayTitle" type="text" value="【東海道新幹線　遅延】" data-input="updateCustomInfoTexts" data-input-args='[]' class="m3-input w-48" />
+              <input id="inputDelayBody" type="text" value="東海道新幹線は、雪の影響、で遅れがでています。" data-input="updateCustomInfoTexts" data-input-args='[]' class="m3-input flex-1" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1 font-bold">お知らせ Information テキスト (動画 00:07 画面用)</label>
+            <input id="inputNoticeBody" type="text" value="車内では、携帯電話をマナーモードに設定の上、通話はお控えください。ご協力をお願いいたします。" data-input="updateCustomInfoTexts" data-input-args='[]' class="m3-input w-full" />
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: PLATFORM STOPPING POSITION & DOOR GUIDE CUSTOMIZER (All Stations Supported!) -->
+      <div id="tabPanel_platform" class="p-4 sm:p-5 hidden space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-3">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-rounded text-emerald-400">train</span>
+            <div>
+              <h3 class="text-xs sm:text-sm font-bold text-emerald-200">全駅対応 ホーム停止位置・階段・エレベーター・出口案内エディタ</h3>
+              <p class="text-[11px] text-slate-400">
+                大塚駅だけでなく、新宿・池袋・東京・巣鴨・幕張豊砂・舞浜など各駅固有のホーム設備・出口名を自動表示＆自由編集できます。
+              </p>
+            </div>
+          </div>
+          <button data-click="setBodyLayout" data-click-args='["platform"]' class="m3-btn-filled bg-emerald-500 text-slate-950 !h-8">
+            停止位置画面を表示
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="m3-card p-3.5 space-y-2">
+            <label class="block text-xs font-bold text-slate-300">① 対象駅の選択 (ワンクリック切替)</label>
+            <select id="selectPlatformStationJump" onchange="jumpToStationForPlatform(this.value)" class="m3-input w-full">
+              <!-- Populated dynamically from current route stations -->
+            </select>
+            <p class="text-[11px] text-slate-400">駅を切り替えると、その駅の出口・階段位置・開くドア方向が即座に反映されます。</p>
+          </div>
+
+          <div class="m3-card p-3.5 space-y-2">
+            <label class="block text-xs font-bold text-slate-300">② 乗車号車 & 編成両数</label>
+            <div class="flex items-center gap-2">
+              <div class="flex-1">
+                <span class="text-[10px] text-slate-400 block">現在号車</span>
+                <input id="inputCarNumber" type="number" min="1" max="15" value="5" data-input="updateCarNumber" data-input-args='[]' class="m3-input w-full" />
+              </div>
+              <div class="flex-1">
+                <span class="text-[10px] text-slate-400 block">編成両数</span>
+                <select id="selectTotalCars" onchange="updateTotalCars(this.value)" class="m3-input w-full">
+                  <option value="8">8両編成</option>
+                  <option value="10">10両編成 (総武・京葉・京浜東北)</option>
+                  <option value="11">11両編成 (山手線)</option>
+                  <option value="12" selected>12両編成 (中央線グリーン車4・5号車付)</option>
+                  <option value="15">15両編成 (東海道・宇都宮)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="m3-card p-3.5 space-y-2">
+            <label class="block text-xs font-bold text-slate-300">③ 開くドアの方向 (現在駅)</label>
+            <select id="selectDoorSide" data-change="updateDoorSide" data-change-args='[]' class="m3-input w-full">
+              <option value="opposite">反対側のドアが開きます (⛔ 進入禁止・IMG_4437)</option>
+              <option value="this">こちら側のドアが開きます (両開きドア開閉アニメ)</option>
+            </select>
+            <p class="text-[11px] text-slate-400">駅ごとの標準設定または手動で切り替え可能です。</p>
+          </div>
+
+          <div class="m3-card p-3.5 space-y-2">
+            <label class="block text-xs font-bold text-slate-300">④ 黄色出口案内バナー (現在駅)</label>
+            <input id="inputExitBannerJp" type="text" placeholder="例: 北口・南口" data-input="updateCurrentStationPlatformMeta" data-input-args='[]' class="m3-input w-full mb-1.5" />
+            <input id="inputExitBannerEn" type="text" placeholder="例: North Exit · South Exit" data-input="updateCurrentStationPlatformMeta" data-input-args='[]' class="m3-input w-full" />
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: STATION LIST EDITOR -->
+      <div id="tabPanel_stations" class="p-4 sm:p-5 hidden space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p class="text-xs text-slate-200 font-bold">
+              各駅の駅名・3レターコード・ナンバリング・所要時間(分)・出口名称・開くドア方向・乗換路線をリアルタイムに編集できます。
+            </p>
+            <p class="text-[11px] text-slate-400">
+              乗換路線はカンマ区切りまたはプリセットボタンで実際の路線記号・路線カラー付きバッジとして自動変換されます（例: <code class="text-emerald-300">山手線, 京浜東北線, 丸ノ内線, 日比谷線</code>）。
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button data-click="addStationToRoute" data-click-args='[]' class="m3-btn-filled bg-emerald-500 text-slate-950 !h-8">
+              <span class="material-symbols-rounded">add</span>
+              駅を追加
+            </button>
+            <button data-click="exportRouteJson" data-click-args='[]' class="m3-btn-tonal !h-8" title="現在の路線データをJSONとしてコピー">
+              <span class="material-symbols-rounded">content_copy</span>
+              設定JSONコピー
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Transfer Badge Helper Bar -->
+        <div class="flex flex-wrap items-center gap-1.5 bg-slate-950/60 border border-slate-800 rounded-xl p-2.5">
+          <span class="text-[11px] font-bold text-emerald-400 mr-1">現在駅に乗換路線をワンクリック追加:</span>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["JY", "#77c043", "square", "山手線", "Yamanote Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">JY 山手線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["JC", "#eb5c01", "square", "中央線", "Chūō Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">JC 中央線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["JB", "#ffd400", "square", "中央・総武線各駅停車", "Chūō-Sōbu Line (Local)"]' class="m3-chip !h-6 !px-2 !text-[11px]">JB 総武線各停</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["JK", "#00a7e3", "square", "京浜東北線", "Keihin-Tōhoku Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">JK 京浜東北線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["JA", "#00ac9a", "square", "埼京線", "Saikyō Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">JA 埼京線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["JE", "#c9242b", "square", "京葉線", "Keiyō Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">JE 京葉線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["JM", "#e05316", "square", "武蔵野線", "Musashino Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">JM 武蔵野線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["JH", "#77c043", "square", "横浜線", "Yokohama Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">JH 横浜線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["JN", "#ffd400", "square", "南武線", "Nambu Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">JN 南武線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["G", "#ff9500", "circle", "銀座線", "Ginza Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">G 銀座線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["M", "#f62e36", "circle", "丸ノ内線", "Marunouchi Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">M 丸ノ内線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["H", "#b5b5ac", "circle", "日比谷線", "Hibiya Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">H 日比谷線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["T", "#009bbf", "circle", "東西線", "Tōzai Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">T 東西線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["C", "#00bb85", "circle", "千代田線", "Chiyoda Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">C 千代田線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["Y", "#c1a470", "circle", "有楽町線", "Yūrakuchō Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">Y 有楽町線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["N", "#00ac9b", "circle", "南北線", "Namboku Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">N 南北線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["E", "#ce0058", "circle", "都営大江戸線", "Toei Ōedo Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">E 大江戸線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["I", "#006cb6", "circle", "都営三田線", "Toei Mita Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">I 三田線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["S", "#b0bf1e", "circle", "都営新宿線", "Toei Shinjuku Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">S 都営新宿線</button>
+          <button data-click="appendTransferToCurrentStation" data-click-args='["A", "#e85298", "circle", "都営浅草線", "Toei Asakusa Line"]' class="m3-chip !h-6 !px-2 !text-[11px]">A 浅草線</button>
+          <button data-click="clearCurrentStationTransfers" data-click-args='[]' class="m3-chip !h-6 !px-2 !text-[11px] !border-red-500/40 !text-red-300">クリア</button>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-800 rounded-xl max-h-72">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="sticky top-0 bg-slate-950 text-slate-400 border-b border-slate-800 z-10">
+              <tr>
+                <th class="py-2 px-2">順序</th>
+                <th class="py-2 px-2">駅名 (漢字)</th>
+                <th class="py-2 px-2">ひらがな</th>
+                <th class="py-2 px-2">English</th>
+                <th class="py-2 px-2">3レター</th>
+                <th class="py-2 px-2">駅番号</th>
+                <th class="py-2 px-2">所要分</th>
+                <th class="py-2 px-2">出口案内</th>
+                <th class="py-2 px-2">ドア</th>
+                <th class="py-2 px-2">乗換路線 (カンマ区切り)</th>
+              </tr>
+            </thead>
+            <tbody id="stationEditorTableBody" class="divide-y divide-slate-800/70"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 4: CLOCK & VISUAL SETTINGS -->
+      <div id="tabPanel_visual" class="p-4 sm:p-5 hidden space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="m3-card p-4 space-y-3">
+            <h3 class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <span class="material-symbols-rounded text-emerald-400">schedule</span>
+              現在時刻表示設定
+            </h3>
+            <div class="flex items-center gap-2">
+              <button id="btnClockFixed" data-click="setClockMode" data-click-args='["fixed"]' class="m3-btn-filled bg-emerald-500 text-slate-950 flex-1">
+                実写時刻に固定
+              </button>
+              <button id="btnClockRealtime" data-click="setClockMode" data-click-args='["realtime"]' class="m3-btn-tonal flex-1">
+                PC/スマホ現在時刻と連動
+              </button>
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">手動時刻指定</label>
+              <input id="inputManualClock" type="time" value="21:08" data-input="updateManualClock" data-input-args='[]' class="m3-input w-full" />
+            </div>
+          </div>
+
+          <div class="m3-card p-4 space-y-3">
+            <h3 class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <span class="material-symbols-rounded text-emerald-400">tv</span>
+              液晶モニター質感エフェクト
+            </h3>
+            <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer py-0.5">
+              <span>車内化粧板・金属ベゼル外枠</span>
+              <input id="chkShowBezel" type="checkbox" checked data-change="updateVisualEffects" data-change-args='[]' class="accent-emerald-500 w-4 h-4" />
+            </label>
+            <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer py-0.5">
+              <span>液晶パネル光沢・周辺減光</span>
+              <input id="chkShowGlare" type="checkbox" checked data-change="updateVisualEffects" data-change-args='[]' class="accent-emerald-500 w-4 h-4" />
+            </label>
+            <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer py-0.5">
+              <span>RGBサブピクセル走査線</span>
+              <input id="chkShowSubpixel" type="checkbox" checked data-change="updateVisualEffects" data-change-args='[]' class="accent-emerald-500 w-4 h-4" />
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <button id="exitFullscreenBtn" data-click="toggleFullscreenDisplay" data-click-args='[]' class="fixed bottom-4 right-4 z-50 hidden px-4 py-2 rounded-full bg-slate-900/90 hover:bg-slate-800 text-white text-xs font-bold border border-slate-700 shadow-2xl">
+    ✕ 通常画面に戻る
+  </button>
+
+  <!-- ==========================================================
+       APPLICATION LOGIC & PIXEL-ACCURATE JR EAST VIS ENGINE
+       ========================================================== -->
+  <script src="js/01-data.js"></script>
+  <script src="js/02-state.js"></script>
+  <script src="js/03-views.js"></script>
+  <script src="js/04-playback.js"></script>
+  <script src="js/05-controls.js"></script>
+</body>
+</html>
