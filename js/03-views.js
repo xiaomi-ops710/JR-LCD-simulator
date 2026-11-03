@@ -156,135 +156,78 @@
           : 'のりかえ、待ち合せ時間は含まれません。電車により多少時間が異なります。';
       }
 
-      const topStationsHtml = YAMANOTE_LOOP_TOP.map((st, idx) => {
-        let labelHtml = '';
+      // 環状図は「縦横比の決まった箱」の中に描く。線・円・駅名を同じ箱の%で置くので、画面の大きさが変わってもずれない。
+      const N = YAMANOTE_LOOP_TOP.length;               // 駅の数（上下とも同じ）
+      const COL_X = i => 11.5 + (i + 0.5) * (77 / N);    // 列の中心（箱の横幅に対する%）
+      const RING_TOP_Y = 35.4;                           // 上側の線の中心（箱の高さに対する%）
+      const RING_BOTTOM_Y = 59.0;                        // 下側の線の中心
+
+      // 駅名（縦書き・日本語は細くして表示）
+      const topNameHtml = (st) => {
         if (isEn) {
-          labelHtml = `
-            <div class="h-[19cqh] w-full relative flex items-end justify-center pb-[0.8cqh]">
-              <span class="absolute bottom-[1.0cqh] left-[45%] origin-bottom-left -rotate-[54deg] font-['Roboto'] font-bold text-[#181c20] text-[1.95cqw] whitespace-nowrap">${escapeHtml(st.nameEn)}</span>
-            </div>
-          `;
-        } else {
-          const chars = Array.from(st.nameJp);
-          const vChars = chars.map(c => `<span class="block leading-[1.03]">${escapeHtml(c)}</span>`).join('');
-          labelHtml = `
-            <div class="h-[19cqh] flex flex-col justify-between items-center text-[#181c20] font-bold text-[2.35cqw] pb-[0.8cqh]">
-              ${vChars}
-            </div>
-          `;
+          return `<span class="absolute bottom-[1%] left-1/2 origin-bottom-left -rotate-[54deg] font-['Roboto'] font-bold text-[#181c20] text-[1.95cqw] whitespace-nowrap">${escapeHtml(st.nameEn)}</span>`;
         }
-
-        let markerHtml = '';
-        if (!isInner) {
-          // Outer Loop (IMG_4439: Shin-Okubo at idx 0 is red pentagon)
-          const isCurrent = idx === 0;
-          if (isCurrent) {
-            markerHtml = `
-              <div class="relative flex items-center justify-center w-[4.4cqw] h-[4.4cqh]">
-                <svg viewBox="0 0 56 44" class="w-full h-full overflow-visible">
-                  <polygon points="0,0 44,0 54,22 44,44 0,44" fill="#b92b46" stroke="#ffffff" stroke-width="2.5"/>
-                  <circle cx="22" cy="22" r="7.5" fill="#ffffff"/>
-                </svg>
-              </div>
-            `;
-          } else {
-            const isLast = idx === YAMANOTE_LOOP_TOP.length - 1;
-            markerHtml = `
-              <div class="relative flex items-center justify-center">
-                <div class="w-[3.1cqw] h-[5.2cqh] rounded-full bg-[#eef3f7] text-[#1e2226] font-['Roboto'] font-black text-[2.0cqw] flex items-center justify-center shadow-sm">
-                  ${st.mins}
-                </div>
-                ${isLast ? `<span class="absolute -right-[2.3cqw] bottom-0 text-[1.15cqw] font-bold text-[#1e2226]">(分)</span>` : ''}
-              </div>
-            `;
-          }
-        } else {
-          // Inner Loop (Video 00:19 & 00:43: Kanda at idx 14 is orange circle 2 + maroon left chevron!)
-          const isKandaNext = idx === 14;
-          markerHtml = `
-            <div class="relative flex items-center justify-center">
-              <div class="w-[3.25cqw] h-[5.4cqh] rounded-full ${isKandaNext ? 'bg-[#f59e0b] border-[0.22cqw] border-white' : 'bg-[#eef3f7]'} text-[#181c20] font-['Roboto'] font-black text-[2.05cqw] flex items-center justify-center shadow-sm z-20">
-                ${st.innerMins}
-              </div>
-              ${isKandaNext ? `
-                <svg viewBox="0 0 36 44" class="absolute -right-[2.35cqw] w-[2.4cqw] h-[5.2cqh] overflow-visible z-30">
-                  <polygon points="34,2 14,2 2,22 14,42 34,42 22,22" fill="#8c1d24" stroke="#ffffff" stroke-width="2.5"/>
-                </svg>
-              ` : ''}
-            </div>
-          `;
-        }
-
-        return `
-          <div class="flex flex-col items-center justify-end h-full">
-            ${labelHtml}
-            <div class="h-[6.4cqh] flex items-center justify-center z-20">
-              ${markerHtml}
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      const bottomStationsHtml = YAMANOTE_LOOP_BOTTOM.map((st) => {
-        let nameColHtml = '';
+        const vChars = Array.from(st.nameJp).map(c => `<span class="block leading-[1.03]">${escapeHtml(c)}</span>`).join('');
+        return `<div class="flex flex-col justify-end items-center h-full text-[#181c20] font-bold text-[2.35cqw] pb-[1%]" style="transform:scaleX(0.8);">${vChars}</div>`;
+      };
+      const bottomNameHtml = (st) => {
         if (isEn) {
-          nameColHtml = `
-            <div class="h-[19.5cqh] w-full relative flex items-start justify-center pt-[0.8cqh]">
-              <span class="absolute top-[1.5cqh] right-[42%] origin-top-right -rotate-[54deg] font-['Roboto'] font-bold text-[#181c20] text-[1.9cqw] whitespace-nowrap">${escapeHtml(st.nameEn)}</span>
-            </div>
-          `;
-        } else if (st.nameJp.includes('|')) {
+          return `<span class="absolute top-[1%] right-1/2 origin-top-right -rotate-[54deg] font-['Roboto'] font-bold text-[#181c20] text-[1.9cqw] whitespace-nowrap">${escapeHtml(st.nameEn)}</span>`;
+        }
+        if (st.nameJp.includes('|')) {
           const parts = st.nameJp.split('|');
           const colRight = Array.from(parts[0]).map(c => `<span class="block leading-[1.02]">${escapeHtml(c)}</span>`).join('');
-          const colLeft = Array.from(parts[1]).map(c => {
-            const isDash = c === 'ー';
-            return `<span class="block leading-[0.95] text-[1.5cqw] ${isDash ? 'rotate-90' : ''}">${escapeHtml(c)}</span>`;
-          }).join('');
-          nameColHtml = `
-            <div class="h-[19.5cqh] flex flex-row-reverse items-start justify-center gap-[0.15cqw] pt-[0.6cqh] text-[#181c20] font-bold">
-              <div class="flex flex-col items-center text-[2.1cqw]">${colRight}</div>
-              <div class="flex flex-col justify-between items-center h-full">${colLeft}</div>
-            </div>
-          `;
-        } else {
-          const chars = Array.from(st.nameJp);
-          const vChars = chars.map(c => `<span class="block leading-[1.03]">${escapeHtml(c)}</span>`).join('');
-          nameColHtml = `
-            <div class="h-[17cqh] flex flex-col justify-between items-center text-[#181c20] font-bold text-[2.35cqw] pt-[0.8cqh]">
-              ${vChars}
-            </div>
-          `;
+          const colLeft = Array.from(parts[1]).map(c => `<span class="block leading-[0.95] text-[1.5cqw]">${escapeHtml(c)}</span>`).join('');
+          return `<div class="flex flex-row-reverse items-start justify-center gap-[0.15cqw] h-full pt-[1%] text-[#181c20] font-bold" style="transform:scaleX(0.8);"><div class="flex flex-col items-center text-[2.1cqw]">${colRight}</div><div class="flex flex-col items-center text-[1.5cqw]">${colLeft}</div></div>`;
         }
+        const vChars = Array.from(st.nameJp).map(c => `<span class="block leading-[1.03]">${escapeHtml(c)}</span>`).join('');
+        return `<div class="flex flex-col items-center h-full pt-[1%] text-[#181c20] font-bold text-[2.35cqw]" style="transform:scaleX(0.8);">${vChars}</div>`;
+      };
 
-        return `
-          <div class="flex flex-col items-center justify-start h-full">
-            <div class="h-[5.8cqh] flex items-center justify-center z-20">
-              <div class="w-[1.25cqw] h-[2.2cqh] rounded-full bg-[#eef3f7]"></div>
-            </div>
-            ${nameColHtml}
-          </div>
-        `;
-      }).join('');
+      // 上側の数字の円（外回り：新大久保が現在地の赤い五角形、内回り：神田がオレンジ）
+      const topMarkerHtml = (st, idx) => {
+        const x = COL_X(idx);
+        if (!isInner) {
+          if (idx === 0) {
+            return `<div class="absolute -translate-x-1/2 -translate-y-1/2" style="left:${x}%;top:${RING_TOP_Y}%;width:4.4%;aspect-ratio:56/44;"><svg viewBox="0 0 56 44" class="w-full h-full overflow-visible"><polygon points="0,0 44,0 54,22 44,44 0,44" fill="#b92b46" stroke="#ffffff" stroke-width="2.5"/><circle cx="22" cy="22" r="7.5" fill="#ffffff"/></svg></div>`;
+          }
+          const isLast = idx === N - 1;
+          return `<div class="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#eef3f7] text-[#1e2226] font-['Roboto'] font-black flex items-center justify-center shadow-sm" style="left:${x}%;top:${RING_TOP_Y}%;width:4.0%;aspect-ratio:1;font-size:2.0cqw;">${st.mins}${isLast ? `<span class="absolute font-bold text-[1.15cqw]" style="left:100%;top:50%;transform:translateY(-50%);margin-left:0.6cqw;">(分)</span>` : ''}</div>`;
+        }
+        const isKandaNext = idx === 14;
+        if (isKandaNext) {
+          return `<div class="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#f59e0b] border-[0.22cqw] border-white text-[#181c20] font-['Roboto'] font-black flex items-center justify-center" style="left:${x}%;top:${RING_TOP_Y}%;width:4.0%;aspect-ratio:1;font-size:2.05cqw;">${st.innerMins}</div>`
+               + `<svg viewBox="0 0 36 44" class="absolute -translate-y-1/2 overflow-visible" style="left:${x - 4.6}%;top:${RING_TOP_Y}%;width:2.6%;aspect-ratio:36/44;"><polygon points="34,2 14,2 2,22 14,42 34,42 22,22" fill="#8c1d24" stroke="#ffffff" stroke-width="2.5"/></svg>`;
+        }
+        return `<div class="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#eef3f7] text-[#181c20] font-['Roboto'] font-black flex items-center justify-center" style="left:${x}%;top:${RING_TOP_Y}%;width:4.0%;aspect-ratio:1;font-size:2.05cqw;">${st.innerMins}</div>`;
+      };
+
+      // 下側の駅の点（線の上に乗せる）
+      const bottomDotHtml = (idx) => `<div class="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#eef3f7]" style="left:${COL_X(idx)}%;top:${RING_BOTTOM_Y}%;width:1.3%;aspect-ratio:1;"></div>`;
+
+      const topNames = YAMANOTE_LOOP_TOP.map((st, i) => `<div class="absolute top-0 bottom-0" style="left:${COL_X(i)}%;width:${77 / N}%;transform:translateX(-50%);">${topNameHtml(st)}</div>`).join('');
+      const topMarkers = YAMANOTE_LOOP_TOP.map((st, i) => topMarkerHtml(st, i)).join('');
+      const bottomNames = YAMANOTE_LOOP_BOTTOM.map((st, i) => `<div class="absolute top-[62%] bottom-0" style="left:${COL_X(i)}%;width:${77 / N}%;transform:translateX(-50%);">${bottomNameHtml(st)}</div>`).join('');
+      const bottomDots = YAMANOTE_LOOP_BOTTOM.map((st, i) => bottomDotHtml(i)).join('');
 
       container.innerHTML = `
-        <svg viewBox="0 0 1000 390" preserveAspectRatio="none" class="absolute inset-0 w-full h-full z-10 pointer-events-none">
-          <rect x="78" y="138" width="844" height="92" rx="46" ry="46"
-                fill="none" stroke="#68b832" stroke-width="34" />
-          ${isInner ? `
-            <polyline points="66,176 78,192 90,176" fill="none" stroke="#e2e8f0" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <polyline points="910,192 922,176 934,192" fill="none" stroke="#e2e8f0" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
-          ` : `
-            <polyline points="66,192 78,176 90,192" fill="none" stroke="#e2e8f0" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <polyline points="910,176 922,192 934,176" fill="none" stroke="#e2e8f0" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
-          `}
-        </svg>
-
-        <div class="absolute top-[1.2cqh] left-[11.5cqw] right-[11.5cqw] h-[26.2cqh] grid z-20" style="grid-grid-template-columns: repeat(15, minmax(0, 1fr)); grid-template-columns: repeat(15, minmax(0, 1fr));">
-          ${topStationsHtml}
-        </div>
-
-        <div class="absolute top-[32.8cqh] left-[11.5cqw] right-[11.5cqw] h-[26.5cqh] grid z-20" style="grid-template-columns: repeat(15, minmax(0, 1fr));">
-          ${bottomStationsHtml}
+        <div class="absolute inset-0 flex items-center justify-center">
+          <div class="relative" style="height:100%; width:auto; max-width:100%; aspect-ratio:1000/390;">
+            <svg viewBox="0 0 1000 390" preserveAspectRatio="none" class="absolute inset-0 w-full h-full pointer-events-none">
+              <rect x="78" y="138" width="844" height="92" rx="46" ry="46" fill="none" stroke="#68b832" stroke-width="34" />
+              ${isInner ? `
+                <polyline points="66,176 78,192 90,176" fill="none" stroke="#e2e8f0" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="910,192 922,176 934,192" fill="none" stroke="#e2e8f0" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+              ` : `
+                <polyline points="66,192 78,176 90,192" fill="none" stroke="#e2e8f0" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="910,176 922,192 934,176" fill="none" stroke="#e2e8f0" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+              `}
+            </svg>
+            <div class="absolute left-[11.5%] right-[11.5%] top-0 h-[31%]">${topNames}</div>
+            <div class="absolute left-[11.5%] right-[11.5%] top-0 h-full">${topMarkers}</div>
+            <div class="absolute left-[11.5%] right-[11.5%] top-0 h-full">${bottomDots}</div>
+            <div class="absolute left-[11.5%] right-[11.5%] top-0 h-full">${bottomNames}</div>
+          </div>
         </div>
       `;
     }
@@ -764,9 +707,9 @@
             : `<span class="inline-flex items-center justify-center px-[0.22cqw] h-[2.6cqh] rounded-[0.2cqw] border-[0.2cqw] bg-white font-['Roboto'] font-black text-[0.85cqw] leading-none flex-shrink-0 mt-[0.15cqh]" style="border-color:${tr.badgeColor}; color:${tr.badge === 'TX' ? '#ffffff' : '#111827'}; background-color:${tr.badge === 'TX' ? tr.badgeColor : '#ffffff'};">${escapeHtml(tr.badge)}</span>`;
           const textLines = (isEn ? (tr.textEn || tr.textJp) : (tr.textJp || '')).split('|').map(l => `<div>${escapeHtml(l)}</div>`).join('');
           return `
-            <div class="flex items-start gap-[0.25cqw] text-[1.45cqw] font-bold text-[#111827] leading-[1.12] whitespace-nowrap">
+            <div class="flex items-start gap-[0.25cqw] w-full min-w-0 text-[1.45cqw] font-bold text-[#111827] leading-[1.12] whitespace-nowrap">
               ${badgeEl}
-              <div>${textLines}</div>
+              <div data-fit class="min-w-0 overflow-hidden whitespace-nowrap">${textLines}</div>
             </div>
           `;
         }).join('');
