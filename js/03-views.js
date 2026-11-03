@@ -1208,8 +1208,8 @@
           <div class="flex items-center gap-[1.5cqw]">
             ${badgeHtml}
             <div class="flex flex-col min-w-0">
-              <span class="font-bold text-[#111827] ${isCompact ? 'text-[2.95cqw]' : 'text-[4.15cqw]'} leading-tight truncate">${escapeHtml(tr.textJp.replace('|', ''))}</span>
-              <span class="font-['Roboto'] font-bold text-[#1e293b] ${isCompact ? 'text-[1.75cqw]' : 'text-[2.35cqw]'} leading-tight mt-[0.25cqh] truncate">${escapeHtml(tr.textEn || '')}</span>
+              <span data-fit class="inline-block max-w-full overflow-hidden whitespace-nowrap align-bottom font-bold text-[#111827] ${isCompact ? 'text-[2.95cqw]' : 'text-[4.15cqw]'} leading-tight">${escapeHtml(tr.textJp.replace('|', ''))}</span>
+              <span data-fit class="inline-block max-w-full overflow-hidden whitespace-nowrap align-bottom font-['Roboto'] font-bold text-[#1e293b] ${isCompact ? 'text-[1.75cqw]' : 'text-[2.35cqw]'} leading-tight mt-[0.25cqh]">${escapeHtml(tr.textEn || '')}</span>
             </div>
           </div>
         `;
@@ -1414,8 +1414,8 @@
 
           <div class="h-[10.8cqh] flex items-center justify-center relative">
             <div class="min-w-[34cqw] max-w-[68cqw] px-[2.5cqw] h-[7.6cqh] bg-[#e3e842] border border-[#b5ba25] shadow-sm flex flex-col items-center justify-center leading-none">
-              <div class="font-bold text-[2.25cqw] text-[#1e2329] tracking-wide truncate max-w-full">${escapeHtml(exitJp)}</div>
-              <div class="font-bold font-['Roboto'] text-[1.22cqw] text-[#2c323a] mt-[0.35cqh] truncate max-w-full">${escapeHtml(exitEn)}</div>
+              <div data-fit class="font-bold text-[2.25cqw] text-[#1e2329] tracking-wide whitespace-nowrap overflow-hidden max-w-full">${escapeHtml(exitJp)}</div>
+              <div data-fit class="font-bold font-['Roboto'] text-[1.22cqw] text-[#2c323a] mt-[0.35cqh] whitespace-nowrap overflow-hidden max-w-full">${escapeHtml(exitEn)}</div>
             </div>
           </div>
         </div>

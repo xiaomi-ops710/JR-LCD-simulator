@@ -120,7 +120,7 @@
           const enLines = (state.trainTypeEn || 'Local').split('\n');
           wbTypeSlot.innerHTML = `
             <div class="flex flex-col justify-center leading-[1.02] pt-[0.4cqh]">
-              ${enLines.map(l => `<div class="${outlineClass} font-['Roboto'] font-black italic text-[3.55cqw] tracking-tighter whitespace-nowrap" style="-webkit-text-stroke: 0.22cqw #ffffff;">${escapeHtml(l)}</div>`).join('')}
+              ${enLines.map(l => `<div data-fit class="${outlineClass} font-['Roboto'] font-black italic text-[3.55cqw] tracking-tighter whitespace-nowrap overflow-hidden max-w-full" style="-webkit-text-stroke: 0.22cqw #ffffff;">${escapeHtml(l)}</div>`).join('')}
             </div>
           `;
         } else {
