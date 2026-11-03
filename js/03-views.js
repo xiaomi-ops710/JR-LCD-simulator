@@ -1429,6 +1429,15 @@
     /* ==========================================================
        9. LINE-FIRST NAVIGATION & SCENE SWITCHER (路線を選んで切替)
        ========================================================== */
+    /* 路線を選んだとき：既定を適用したあと、利用者が選んだレイアウト・ヘッダー形式を保つ */
+    function applySubScene(subId) {
+      applySubSceneCore(subId);
+      let changed = false;
+      if (state.pickedLayout) { state.bodyLayout = state.pickedLayout; changed = true; }
+      if (state.pickedHeader) { state.headerStyle = state.pickedHeader; changed = true; }
+      if (changed) renderLCD(false);
+    }
+
     function selectLine(lineKey, subSceneId = null) {
       closeEmergencyStop();
       closeTrainInfoScreen();
@@ -1462,7 +1471,8 @@
       `).join('');
     }
 
-    function applySubScene(subId) {
+    /* 路線の既定の表示（プリセット）を適用する本体 */
+    function applySubSceneCore(subId) {
       closeEmergencyStop();
       closeTrainInfoScreen();
       state.activeSubSceneId = subId;

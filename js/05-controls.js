@@ -15,6 +15,15 @@
 
     function setBodyLayout(layout) {
       state.bodyLayout = layout;
+      state.pickedLayout = layout; // 路線を変えても、このレイアウトを保つ
+      renderLCD(false);
+    }
+
+    /* 記録した選択を消して、路線の既定の表示に戻す */
+    function resetLayoutPicks() {
+      state.pickedLayout = null;
+      state.pickedHeader = null;
+      applySubSceneCore(state.activeSubSceneId);
       renderLCD(false);
     }
 
@@ -58,9 +67,13 @@
       const keepDelayTitle = state.customDelayTitle;
       const keepDelayBody = state.customDelayBody;
       const keepNoticeBody = state.customNoticeBody;
+      const keepPickedLayout = state.pickedLayout;
+      const keepPickedHeader = state.pickedHeader;
 
       state = JSON.parse(JSON.stringify(preset));
       state.lang = keepLang;
+      state.pickedLayout = keepPickedLayout; // 利用者が選んだレイアウト・ヘッダーは路線を変えても保つ
+      state.pickedHeader = keepPickedHeader;
       state.autoLangCycleActive = keepAutoLang;
       state.animStyle = keepAnimStyle;
       state.activeLineKey = preset.lineKey || keepActiveLine;
@@ -89,6 +102,7 @@
 
     function updateHeaderStyleFromSelect() {
       state.headerStyle = document.getElementById('selectHeaderStyle').value;
+      state.pickedHeader = state.headerStyle; // 路線を変えても、このヘッダー形式を保つ
       renderLCD(true);
     }
 

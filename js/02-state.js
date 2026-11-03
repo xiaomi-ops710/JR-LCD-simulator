@@ -165,7 +165,7 @@
           wbDestHtml = `<span class="text-[#111827] font-['Roboto'] font-bold text-[4.15cqw] leading-none whitespace-nowrap">for ${escapeHtml((state.destinationEn || 'Tōkyō').replace('\n', ' '))}</span>`;
         } else {
           const dKanji = isZh ? (state.destinationZh || state.destinationJp) : (isKo ? (state.destinationKo || state.destinationJp) : state.destinationJp);
-          wbDestHtml = `<span class="text-[#111827] font-bold text-[4.05cqw] leading-none tracking-wide whitespace-nowrap">${escapeHtml(dKanji)} ${escapeHtml(state.destSuffixJp || '行')}</span>`;
+          wbDestHtml = `<span data-fit class="inline-block max-w-full overflow-hidden align-bottom text-[#111827] font-bold text-[4.05cqw] leading-none tracking-wide whitespace-nowrap">${escapeHtml(dKanji)} ${escapeHtml(state.destSuffixJp || '行')}</span>`;
         }
         updateRollStage('rollWbDest', wbDestHtml, animateRoll);
 
@@ -299,7 +299,7 @@
             const destFont = destStr.length > 9 ? 'text-[2.7cqw]' : (destStr.length > 6 ? 'text-[3.1cqw]' : 'text-[3.55cqw]');
             pillarDestHtml = `
               <div class="w-full flex items-end justify-between gap-[0.6cqw] pb-[2.8cqh] min-w-0">
-                <div class="${destFont} text-white font-bold leading-none tracking-tight whitespace-nowrap overflow-hidden min-w-0">${escapeHtml(destStr)}</div>
+                <div data-fit class="${destFont} text-white font-bold leading-none tracking-tight whitespace-nowrap overflow-hidden min-w-0">${escapeHtml(destStr)}</div>
                 <div class="shrink-0 text-slate-200 font-bold text-[2.0cqw] leading-none pb-[0.2cqh]">${escapeHtml(suffixStr)}</div>
               </div>
             `;
@@ -361,7 +361,7 @@
             const yukiText = isKo ? '행' : (isZh ? '方向' : (state.destSuffixJp || 'ゆき'));
             polyDestHtml = `
               <div class="w-full h-full flex items-center justify-center gap-[1cqw] px-[1cqw] min-w-0">
-                <span class="text-white font-bold leading-none whitespace-nowrap overflow-hidden min-w-0" style="font-size:${fSize};">${escapeHtml(formattedDest)}</span>
+                <span data-fit class="text-white font-bold leading-none whitespace-nowrap overflow-hidden min-w-0" style="font-size:${fSize};">${escapeHtml(formattedDest)}</span>
                 <span class="shrink-0 text-slate-100 font-bold text-[2.25cqw] leading-none">${escapeHtml(yukiText)}</span>
               </div>
             `;
@@ -544,6 +544,21 @@
       document.getElementById('phaseBtnLabel').textContent = phaseLabels[state.runningPhase];
     }
 
+    /* 要素の幅に収まるまで文字を小さくする（実際の幅で測るので、どの言語・長さでも隠れない） */
+    function fitTextToBox(el) {
+      const min = 9; // px。これ以上は小さくしない
+      let size = parseFloat(getComputedStyle(el).fontSize);
+      el.style.whiteSpace = 'nowrap';
+      while (el.scrollWidth > el.clientWidth + 1 && size > min) {
+        size -= 0.5;
+        el.style.fontSize = size + 'px';
+      }
+    }
+
+    function fitAllDestinations() {
+      document.querySelectorAll('#lcdScreen [data-fit]').forEach(fitTextToBox);
+    }
+
     function renderLCD(animateRoll = true) {
       const ctx = createRenderContext(animateRoll);
       renderTopBadge(ctx);
@@ -551,5 +566,6 @@
       renderQuickStationPills(ctx.targetIdx);
       renderBodyLayout(ctx);
       renderPhaseLabel();
+      fitAllDestinations();
     }
 
