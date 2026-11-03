@@ -1,0 +1,92 @@
+name: Unpack zip & Deploy to GitHub Pages
+
+# 次の2通りで動きます
+#  1. uploads/ に zip をアップロードして main にコミット → 展開してデプロイ
+#  2. main へ直接 push（ファイルを直接編集した場合）→ デプロイ
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # 展開結果をコミットするため
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unpack uploaded zip files
+        run: |
+          shopt -s nullglob
+          ZIPS=(uploads/*.zip)
+          if [ ${#ZIPS[@]} -eq 0 ]; then
+            echo "uploads/ に zip はありません。展開をスキップします。"
+            exit 0
+          fi
+          sudo apt-get update -qq && sudo apt-get install -y -qq rsync unzip >/dev/null
+          for z in "${ZIPS[@]}"; do
+            echo "展開: $z"
+            tmp=$(mktemp -d)
+            unzip -q "$z" -d "$tmp"
+            rm -rf "$tmp/__MACOSX"            # Macで作られた zip の不要フォルダ
+            # 1階層のフォルダに包まれている場合は、その中身を対象にする
+            entries=("$tmp"/*)
+            if [ ${#entries[@]} -eq 1 ] && [ -d "${entries[0]}" ]; then
+              src="${entries[0]}"
+            else
+              src="$tmp"
+            fi
+            if [ ! -f "$src/index.html" ]; then
+              echo "::error::zip の中に index.html が見つかりません: $z"
+              exit 1
+            fi
+            # uploads/ と .github/ と .git/ は残し、それ以外を zip の内容で置き換える
+            rsync -a --delete \
+              --exclude '.git' --exclude '.github' --exclude 'uploads/' \
+              "$src"/ ./
+            rm -rf "$tmp"
+            rm -f "$z"
+          done
+
+      - name: Commit unpacked files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "変更はありません。"
+          else
+            git commit -m "Deploy: 展開した zip の内容を反映 [skip ci]"
+            git push
+          fi
+
+      - name: Prepare site
+        run: |
+          rm -rf _site
+          mkdir _site
+          rsync -a --exclude '.git' --exclude '.github' --exclude 'uploads/' --exclude '_site' --exclude 'tests/' --exclude 'docs/' ./ _site/
+          touch _site/.nojekyll
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
