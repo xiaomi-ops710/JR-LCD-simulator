@@ -19,6 +19,15 @@
       renderLCD(false);
     }
 
+    /* 詳細設定の開閉（通常は閉じておく） */
+    function toggleAdvancedPanel() {
+      const deck = document.getElementById('controlDeck');
+      const btn = document.getElementById('advancedToggle');
+      const open = deck.style.display === 'none';
+      deck.style.display = open ? '' : 'none';
+      btn.textContent = open ? '詳細設定を閉じる' : '詳細設定を開く（ホーム・駅一覧・時計など）';
+    }
+
     /* 記録した選択を消して、路線の既定の表示に戻す */
     function resetLayoutPicks() {
       state.pickedLayout = null;

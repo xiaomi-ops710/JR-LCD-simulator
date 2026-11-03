@@ -119,8 +119,8 @@
         if (isEn) {
           const enLines = (state.trainTypeEn || 'Local').split('\n');
           wbTypeSlot.innerHTML = `
-            <div class="flex flex-col justify-center leading-[1.02] pt-[0.4cqh]">
-              ${enLines.map(l => `<div data-fit class="${outlineClass} font-['Roboto'] font-black italic text-[3.55cqw] tracking-tighter whitespace-nowrap overflow-hidden max-w-full" style="-webkit-text-stroke: 0.22cqw #ffffff;">${escapeHtml(l)}</div>`).join('')}
+            <div class="flex flex-col justify-center leading-[1.02] pt-[0.4cqh] min-w-0" style="width:18cqw;">
+              ${enLines.map(l => `<div data-fit class="${outlineClass} font-['Roboto'] font-black italic text-[3.55cqw] tracking-tighter whitespace-nowrap" style="overflow:hidden;" style="-webkit-text-stroke: 0.22cqw #ffffff;">${escapeHtml(l)}</div>`).join('')}
             </div>
           `;
         } else {
@@ -165,7 +165,7 @@
           wbDestHtml = `<span class="text-[#111827] font-['Roboto'] font-bold text-[4.15cqw] leading-none whitespace-nowrap">for ${escapeHtml((state.destinationEn || 'Tōkyō').replace('\n', ' '))}</span>`;
         } else {
           const dKanji = isZh ? (state.destinationZh || state.destinationJp) : (isKo ? (state.destinationKo || state.destinationJp) : state.destinationJp);
-          wbDestHtml = `<span data-fit class="inline-block max-w-full overflow-hidden align-bottom text-[#111827] font-bold text-[4.05cqw] leading-none tracking-wide whitespace-nowrap">${escapeHtml(dKanji)} ${escapeHtml(state.destSuffixJp || '行')}</span>`;
+          wbDestHtml = `<span data-fit class="inline-block overflow-hidden align-bottom text-[#111827] font-bold text-[4.05cqw] leading-none tracking-wide whitespace-nowrap">${escapeHtml(dKanji)} ${escapeHtml(state.destSuffixJp || '行')}</span>`;
         }
         updateRollStage('rollWbDest', wbDestHtml, animateRoll);
 
@@ -553,11 +553,14 @@
       el.style.transform = '';
       el.style.transformOrigin = '';
       el.style.marginRight = '';
+      el.style.width = '';
       el.style.whiteSpace = 'nowrap';
-      const available = el.clientWidth;   // 行の中で使える幅（flexで縮まった後の幅）
+      const available = el.clientWidth;   // 行の中で使える幅
       const natural = el.scrollWidth;     // 文字そのものの幅
       if (!available || !natural || natural <= available + 1) return;
       const scale = Math.max(MIN_SCALE, available / natural);
+      // 先に「文字の幅いっぱいの箱」にしてから横に縮める（箱ごと縮めると文字が切れるため）
+      el.style.width = natural + 'px';
       el.style.transformOrigin = 'left center';
       el.style.transform = `scaleX(${scale.toFixed(3)})`;
       el.style.marginRight = `${-(natural * (1 - scale)).toFixed(1)}px`;
