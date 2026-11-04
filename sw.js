@@ -1,6 +1,6 @@
 /* サービスワーカー：アプリの本体をキャッシュし、オフラインでも開けるようにする。
    ファイルを変えたら VERSION を上げる（古いキャッシュを捨てるため）。 */
-const VERSION = 'vis-sim-v5';
+const VERSION = 'vis-sim-v6';
 const APP_SHELL = [
   './',
   './index.html',
@@ -32,19 +32,18 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 基本は「キャッシュを先に返し、裏で最新を取りに行く」。
-// 外部のライブラリ（Tailwind・フォント・Tone.js）も、初回の取得後はキャッシュする。
+// 通信を優先する（network-first）。更新したら、次の読み込みで必ず新しいファイルが届く。
+// 通信できないとき（オフライン）だけ、保存しておいたファイルを使う。
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   event.respondWith(
-    caches.open(VERSION).then(async (cache) => {
-      const cached = await cache.match(req, { ignoreSearch: true });
-      const network = fetch(req).then((res) => {
-        if (res && (res.ok || res.type === 'opaque')) cache.put(req, res.clone());
-        return res;
-      }).catch(() => cached);
-      return cached || network;
-    })
+    fetch(req).then((res) => {
+      if (res && (res.ok || res.type === 'opaque')) {
+        const copy = res.clone();
+        caches.open(VERSION).then((cache) => cache.put(req, copy));
+      }
+      return res;
+    }).catch(() => caches.open(VERSION).then((cache) => cache.match(req, { ignoreSearch: true })))
   );
 });
