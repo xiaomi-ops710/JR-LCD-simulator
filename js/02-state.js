@@ -285,9 +285,9 @@
               `<div class="text-white font-bold font-['Roboto'] text-[3.35cqw] leading-[1.06] tracking-tight whitespace-nowrap">${escapeHtml(l)}</div>`
             ).join('');
             pillarDestHtml = `
-              <div class="w-full flex flex-col items-start justify-end">
-                <div class="text-slate-100 font-bold font-['Roboto'] text-[2.05cqw] leading-tight mb-[0.25cqh]">Bound for</div>
-                ${linesHtml}
+              <div class="w-full h-full min-h-0 overflow-hidden flex flex-col items-start justify-end">
+                <div class="text-slate-100 font-bold font-['Roboto'] text-[1.9cqw] leading-tight mb-[0.2cqh]">Bound for</div>
+                <div data-fit-y class="w-full min-h-0 flex flex-col items-start">${linesHtml}</div>
               </div>
             `;
           } else {

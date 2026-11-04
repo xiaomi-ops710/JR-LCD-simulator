@@ -1,6 +1,6 @@
 /* サービスワーカー：アプリの本体をキャッシュし、オフラインでも開けるようにする。
    ファイルを変えたら VERSION を上げる（古いキャッシュを捨てるため）。 */
-const VERSION = 'vis-sim-v1';
+const VERSION = 'vis-sim-v3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ const APP_SHELL = [
   './js/03-views.js',
   './js/04-playback.js',
   './js/05-controls.js',
+  './js/06-sound.js',
   './js/pwa.js',
   './icons/icon-192.png',
   './icons/icon-512.png',

@@ -120,16 +120,23 @@
       renderLCD(true);
     }
 
-    function toggleAutoSimulation() {
-      state.autoRunActive = !state.autoRunActive;
-      const btn = document.getElementById('btnAutoRun');
-      const txt = document.getElementById('autoRunText');
+    /* 画面の自動切替の1コマ（動作速度に合わせて間隔が変わる） */
+    function autoPageTick() {
+          let pages = ['straight', 'platform'];
+          if (state.linePrefix === 'JY') {
+            pages = ['curve_rtl', 'notice_info', 'loop', 'platform'];
+          } else if (state.linePrefix === 'JC') {
+            pages = ['chuo_stopping', 'chuo_train_info', 'chuo_platform', 'chuo_door', 'chuo_transfer'];
+          } else if (state.linePrefix === 'JB') {
+            pages = ['sobu_rect', 'chuo_platform', 'chuo_door', 'chuo_transfer'];
+          }
+          const curIdx = pages.indexOf(state.bodyLayout);
+          state.bodyLayout = pages[(curIdx + 1) % pages.length];
+          renderLCD(false);
+    }
 
-      if (state.autoRunActive) {
-        btn.className = 'm3-btn-filled bg-amber-500 hover:bg-amber-400 text-slate-950 shadow';
-        txt.textContent = '自動走行: ON';
-
-        autoRunInterval = setInterval(() => {
+    /* 自動運転の1コマ（動作速度に合わせて間隔が変わる） */
+    function autoRunTick() {
           state.trainProgress += 20;
           if (state.trainProgress > 100) {
             state.trainProgress = 0;
@@ -151,7 +158,19 @@
           document.getElementById('sliderTrainProgress').value = state.trainProgress;
           document.getElementById('labelTrainProgress').textContent = `${state.trainProgress}%`;
           renderLCD(true);
-        }, 1800);
+      playPhaseSound(state.runningPhase);
+    }
+
+    function toggleAutoSimulation() {
+      state.autoRunActive = !state.autoRunActive;
+      const btn = document.getElementById('btnAutoRun');
+      const txt = document.getElementById('autoRunText');
+
+      if (state.autoRunActive) {
+        btn.className = 'm3-btn-filled bg-amber-500 hover:bg-amber-400 text-slate-950 shadow';
+        txt.textContent = '自動走行: ON';
+
+        autoRunInterval = setInterval(autoRunTick, 1800 / SIM.speed);
       } else {
         btn.className = 'm3-btn-filled bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow';
         txt.textContent = '自動走行: OFF';
@@ -167,19 +186,7 @@
       if (state.autoPageCycleActive) {
         btn.className = 'm3-chip active';
         txt.textContent = '画面自動ローテ: ON';
-        autoPageInterval = setInterval(() => {
-          let pages = ['straight', 'platform'];
-          if (state.linePrefix === 'JY') {
-            pages = ['curve_rtl', 'notice_info', 'loop', 'platform'];
-          } else if (state.linePrefix === 'JC') {
-            pages = ['chuo_stopping', 'chuo_train_info', 'chuo_platform', 'chuo_door', 'chuo_transfer'];
-          } else if (state.linePrefix === 'JB') {
-            pages = ['sobu_rect', 'chuo_platform', 'chuo_door', 'chuo_transfer'];
-          }
-          const curIdx = pages.indexOf(state.bodyLayout);
-          state.bodyLayout = pages[(curIdx + 1) % pages.length];
-          renderLCD(false);
-        }, 5000);
+        autoPageInterval = setInterval(autoPageTick, 5000 / SIM.speed);
       } else {
         btn.className = 'm3-chip';
         txt.textContent = '画面自動ローテ: OFF';
@@ -233,3 +240,19 @@
       } catch (e) {}
     }
 
+
+/* 動作速度（SIM.speed）：自動運転・画面切替の間隔を変える。動作中なら作り直す */
+const SIM = { speed: 1, sound: false };
+function setSimSpeed(v) {
+  SIM.speed = Math.max(0.5, Math.min(3, Number(v) || 1));
+  const lbl = document.getElementById('simSpeedLabel');
+  if (lbl) lbl.textContent = SIM.speed.toFixed(1) + '倍速';
+  if (typeof autoRunInterval !== 'undefined' && autoRunInterval) {
+    clearInterval(autoRunInterval);
+    autoRunInterval = setInterval(autoRunTick, 1800 / SIM.speed);
+  }
+  if (typeof autoPageInterval !== 'undefined' && autoPageInterval) {
+    clearInterval(autoPageInterval);
+    autoPageInterval = setInterval(autoPageTick, 5000 / SIM.speed);
+  }
+}
