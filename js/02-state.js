@@ -220,7 +220,7 @@
 
         updateRollStage(
           'rollWbMainStation',
-          `<span class="font-bold leading-none whitespace-nowrap inline-block ${isEn ? "font-['Roboto']" : ''}" style="color: #007810; font-size: ${wbFontSize}; letter-spacing: ${wbLetterSpacing}; transform: scaleX(${wbScaleX}); transform-origin: center;">${escapeHtml(wbStName)}</span>`,
+          `<span data-fit class="font-bold leading-none whitespace-nowrap inline-block max-w-full overflow-hidden align-middle ${isEn ? "font-['Roboto']" : ''}" style="color: #007810; font-size: ${wbFontSize}; letter-spacing: ${wbLetterSpacing};">${escapeHtml(wbStName)}</span>`,
           animateRoll
         );
 
@@ -566,8 +566,23 @@
       el.style.marginRight = `${-(natural * (1 - scale)).toFixed(1)}px`;
     }
 
+    /* 縦書きの駅名を、決まった高さに収める（文字の太さは保ち、縦方向だけ詰める） */
+    function fitVerticalToBox(el) {
+      el.style.transform = '';
+      el.style.transformOrigin = '';
+      el.style.height = '';
+      const available = el.clientHeight;
+      const natural = el.scrollHeight;
+      if (!available || !natural || natural <= available + 1) return;
+      const scale = Math.max(0.5, available / natural);
+      el.style.height = natural + 'px';
+      el.style.transformOrigin = 'center top';
+      el.style.transform = `scaleY(${scale.toFixed(3)})`;
+    }
+
     function fitAllDestinations() {
       document.querySelectorAll('#lcdScreen [data-fit]').forEach(fitTextToBox);
+      document.querySelectorAll('#lcdScreen [data-fit-y]').forEach(fitVerticalToBox);
     }
 
     function renderLCD(animateRoll = true) {

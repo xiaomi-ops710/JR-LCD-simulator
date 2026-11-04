@@ -54,7 +54,7 @@
           }).join('');
           const fontSizeStyle = chars.length >= 6 ? 'font-size: 2.35cqw;' : (chars.length === 5 ? 'font-size: 2.95cqw;' : '');
           stationNameHtml = `
-            <div class="vertical-station-name ${isSkipped ? 'skipped-station' : (isDeparted ? 'passed-station' : '')}" style="${fontSizeStyle}">
+            <div data-fit-y class="vertical-station-name ${isSkipped ? 'skipped-station' : (isDeparted ? 'passed-station' : '')}" style="${fontSizeStyle}">
               ${charsHtml}
             </div>
           `;
@@ -94,9 +94,11 @@
             } else {
               badgeEl = `<span class="transfer-badge-jm" style="border-color: ${tr.badgeColor || '#e05316'}">${escapeHtml(tr.badge || 'JR')}</span>`;
             }
-            return `<div class="transfer-item">${badgeEl}<div class="text-left leading-tight">${textBlock}</div></div>`;
+            // 2段表示：記号だけを並べ、路線名は記号に合わせたときの説明（title）として持つ
+            const nameTip = escapeHtml(lines.join(' / '));
+            return `<span class="transfer-item" title="${nameTip}">${badgeEl}</span>`;
           }).join('');
-          transfersHtml = `<div class="transfer-list">${items}</div>`;
+          transfersHtml = `<div class="transfer-list flex flex-wrap justify-center items-center gap-[0.35cqw]">${items}</div>`;
         }
 
         colEl.innerHTML = `
@@ -114,6 +116,33 @@
       });
 
       renderStraightRouteBarSvg();
+
+      // 路線名の一覧（列の外・下の帯）：同じ路線は1回だけ載せる
+      const legendEl = document.getElementById('transferLegend');
+      if (legendEl) {
+        const seen = new Set();
+        const items = [];
+        orderedStations.forEach(st => (st.transfers || []).forEach(tr => {
+          const key = (tr.badge || '') + '|' + (tr.textJp || '');
+          if (seen.has(key) || !tr.textJp) return;
+          seen.add(key);
+          items.push(tr);
+        }));
+        legendEl.innerHTML = items.map(tr => {
+          const isShin = tr.badge === 'SHINKANSEN_E' || tr.badge === 'SHINKANSEN_W';
+          const isCircle = tr.badgeShape === 'circle';
+          const badge = isShin
+            ? `<span class="inline-flex items-center justify-center w-[1.9cqw] h-[2.8cqh] rounded-[0.25cqw] text-white text-[1.0cqw] flex-shrink-0" style="background:${tr.badgeColor || '#008c45'};">🚄</span>`
+            : isCircle
+              ? `<span class="inline-flex items-center justify-center w-[1.8cqw] h-[2.8cqh] rounded-full border-[0.25cqw] bg-white font-['Roboto'] font-black text-[0.95cqw] leading-none flex-shrink-0" style="border-color:${tr.badgeColor || '#006cb6'};">${escapeHtml(tr.badge || '')}</span>`
+              : tr.badge === 'RAIL'
+                ? `<span class="transfer-badge-rail">🚆</span>`
+                : `<span class="transfer-badge-jm flex-shrink-0" style="border-color:${tr.badgeColor || '#e05316'}">${escapeHtml(tr.badge || 'JR')}</span>`;
+          const name = isEn ? (tr.textEn || tr.textJp) : tr.textJp;
+          return `<div class="flex items-center gap-[0.35cqw] w-[23cqw] min-w-0">${badge}<div data-fit class="flex-1 min-w-0 overflow-hidden whitespace-nowrap text-[1.3cqw] font-bold text-[#111827] leading-tight">${escapeHtml(name.replace(/\|/g, ''))}</div></div>`;
+        }).join('');
+      }
+
     }
 
     function renderStraightRouteBarSvg() {
@@ -364,14 +393,17 @@
         const trItemsHtml = trList.map(tr => {
           const isCircle = tr.badgeShape === 'circle';
           const badgeColor = tr.badgeColor || '#006cb6';
-          const badgeHtml = isCircle
+          const isShinkansen = tr.badge === 'SHINKANSEN_E' || tr.badge === 'SHINKANSEN_W';
+          const badgeHtml = isShinkansen
+            ? `<span class="inline-flex items-center justify-center w-[3.2cqw] h-[3.6cqh] rounded-[0.4cqw] text-white text-[1.7cqw] shadow-sm flex-shrink-0" style="background:${badgeColor};">🚄</span>`
+            : isCircle
             ? `<span class="inline-flex items-center justify-center w-[2.3cqw] h-[3.9cqh] rounded-full border-[0.38cqw] bg-white font-['Roboto'] font-black text-[1.15cqw] leading-none shadow-sm" style="border-color:${badgeColor}; color:${badgeColor};">${escapeHtml(tr.badge || 'I')}</span>`
             : `<span class="inline-flex items-center justify-center px-[0.35cqw] h-[3.6cqh] rounded-[0.3cqw] border-[0.26cqw] bg-white font-['Roboto'] font-black text-[1.1cqw] leading-none shadow-sm" style="border-color:${badgeColor}; color:#181b20;">${escapeHtml(tr.badge || 'JR')}</span>`;
 
           return `
             <div class="flex items-center justify-end gap-[0.55cqw] mt-[1.0cqh]">
               ${badgeHtml}
-              <span class="font-bold text-[2.55cqw] text-[#1a2233] tracking-tight">${escapeHtml(isEn ? (tr.textEn || tr.textJp) : tr.textJp)}</span>
+              <span class="font-bold text-[2.55cqw] text-[#1a2233] tracking-tight">${(isEn ? (tr.textEn || tr.textJp) : tr.textJp).split('|').map(escapeHtml).join('<br>')}</span>
             </div>
           `;
         }).join('');
@@ -700,24 +732,26 @@
         const chars = Array.from(st.nameJp);
         const vChars = chars.map(c => `<span class="block leading-[1.03]">${escapeHtml(c)}</span>`).join('');
 
-        const transfersHtml = (st.transfers || []).map(tr => {
+        // 乗換えの1行（記号＋路線名）。共通の部品。
+        const transferItemHtml = (tr) => {
           const isCircle = tr.badgeShape === 'circle';
           const badgeEl = isCircle
             ? `<span class="inline-flex items-center justify-center w-[1.65cqw] h-[2.7cqh] rounded-full border-[0.25cqw] bg-white font-['Roboto'] font-black text-[0.9cqw] leading-none flex-shrink-0 mt-[0.15cqh]" style="border-color:${tr.badgeColor}; color:#111827;">${escapeHtml(tr.badge)}</span>`
             : `<span class="inline-flex items-center justify-center px-[0.22cqw] h-[2.6cqh] rounded-[0.2cqw] border-[0.2cqw] bg-white font-['Roboto'] font-black text-[0.85cqw] leading-none flex-shrink-0 mt-[0.15cqh]" style="border-color:${tr.badgeColor}; color:${tr.badge === 'TX' ? '#ffffff' : '#111827'}; background-color:${tr.badge === 'TX' ? tr.badgeColor : '#ffffff'};">${escapeHtml(tr.badge)}</span>`;
           const textLines = (isEn ? (tr.textEn || tr.textJp) : (tr.textJp || '')).split('|').map(l => `<div>${escapeHtml(l)}</div>`).join('');
           return `
-            <div class="flex items-start gap-[0.25cqw] w-full min-w-0 text-[1.45cqw] font-bold text-[#111827] leading-[1.12] whitespace-nowrap">
+            <div class="flex items-start gap-[0.25cqw] w-full min-w-0 text-[1.45cqw] font-bold text-[#111827] leading-[1.12]">
               ${badgeEl}
-              <div data-fit class="min-w-0 overflow-hidden whitespace-nowrap">${textLines}</div>
+              <div class="min-w-0 break-words">${textLines}</div>
             </div>
           `;
-        }).join('');
+        };
+        const transfersHtml = (st.transfers || []).map(transferItemHtml).join('');
 
         return `
           <div onclick="selectStationDirectly(${globalIdx})" title="${escapeHtml(st.nameJp)}駅へ移動" class="flex flex-col items-center h-full relative cursor-pointer hover:opacity-85 transition-opacity">
             <!-- Vertical Station Name -->
-            <div class="h-[25.5cqh] flex flex-col justify-between items-center font-bold text-[3.8cqw] ${isPassed ? 'text-[#9ca3af]' : 'text-[#111827]'}">
+            <div data-fit-y class="h-[25.5cqh] flex flex-col justify-between items-center font-bold text-[3.8cqw] ${isPassed ? 'text-[#9ca3af]' : 'text-[#111827]'}">
               ${vChars}
             </div>
 
@@ -927,7 +961,7 @@
               ` : ''}
             </div>
             ${isCurrent ? `
-              <span class="absolute -bottom-[2.8cqh] font-bold text-[#111827] text-[1.65cqw] whitespace-nowrap">乗車位置</span>
+              <span class="absolute -bottom-[4.6cqh] left-1/2 -translate-x-1/2 font-bold text-[#111827] text-[1.5cqw] whitespace-nowrap">乗車位置</span>
             ` : ''}
           </div>
         `;
@@ -962,7 +996,7 @@
           <div class="flex items-center gap-[1.2cqw]">
             ${iconHtml}
             <div class="flex flex-col">
-              <span class="font-bold text-[#111827] text-[3.8cqw] leading-none">${escapeHtml(tr.textJp)}</span>
+              <span class="font-bold text-[#111827] text-[3.8cqw] leading-none">${tr.textJp.split('|').map(escapeHtml).join('<br>')}</span>
               <span class="font-['Roboto'] font-bold text-[#1e293b] text-[2.1cqw] leading-tight mt-[0.3cqh]">${escapeHtml(tr.textEn || '')}</span>
             </div>
           </div>
@@ -1040,7 +1074,7 @@
             </div>
           </div>
 
-          <div class="absolute right-[1.8cqw] bottom-[0.8cqh] font-bold text-[#111827] text-[1.75cqw]">
+          <div class="absolute right-[1.2cqw] top-[1.2cqh] font-bold text-[#111827] text-[1.4cqw] whitespace-nowrap">
             2025年8月現在
           </div>
         </div>

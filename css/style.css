@@ -857,7 +857,8 @@
     .bottom-disclaimer {
       position: absolute;
       right: 1.8cqw;
-      bottom: 0.85cqh;
+      top: 82cqh;
+      bottom: auto;
       color: #252930;
       font-weight: 700;
       font-size: 1.32cqw;
@@ -1021,3 +1022,16 @@
 
 /* 上部の路線カードは名前だけ表示（説明は省いてヘッダーを低くする） */
 .line-card-btn .line-desc { display: none; }
+
+/* 上部の号車表示は右端に固定し、時計（左寄せ）と重ならないようにする */
+.car-badge-group,
+.car-pillar-group {
+  position: absolute;
+  right: 1.2cqw;
+  top: 0.15cqh;
+}
+.clock-group { max-width: 56cqw; }
+/* 隠す指定（hidden）を、号車表示の指定より優先させる */
+.car-badge-group.hidden,
+.car-pillar-group.hidden,
+.clock-group.hidden { display: none !important; }
