@@ -168,12 +168,12 @@
 
       if (state.autoRunActive) {
         btn.className = 'm3-btn-filled bg-amber-500 hover:bg-amber-400 text-slate-950 shadow';
-        txt.textContent = '自動走行: ON';
+        txt.textContent = '自動走行モード: ON（停止中）';
 
         autoRunInterval = setInterval(autoRunTick, 1800 / SIM.speed);
       } else {
         btn.className = 'm3-btn-filled bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow';
-        txt.textContent = '自動走行: OFF';
+        txt.textContent = '自動走行モード: OFF';
         clearInterval(autoRunInterval);
       }
     }

@@ -17,9 +17,19 @@ function ensureAudio() {
     if (!AC) return null;
     audioCtx = new AC();
   }
-  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (audioCtx.state !== 'running') audioCtx.resume();
   return audioCtx;
 }
+
+// iPad（Safari）は、画面をタップした後でないと音を出せない。最初のタップで音声を準備する。
+function unlockAudioOnGesture() {
+  const unlock = () => {
+    const ctx = ensureAudio(); if (!ctx) return;
+    const src = ctx.createBufferSource(); src.buffer = ctx.createBuffer(1, 1, 22050); src.connect(ctx.destination); src.start(0);
+  };
+  ['touchend', 'pointerup', 'click', 'keydown'].forEach((ev) => document.addEventListener(ev, unlock, { passive: true }));
+}
+unlockAudioOnGesture();
 
 // 速度（km/h）に対応する、インバータの周波数（Hz）。加速中は周波数が段階的に上がる。
 function inverterHz(kmh) {
@@ -33,7 +43,7 @@ function playVvvf(durationSec, fromKmh) {
   const toKmh = Math.min(E231.maxKmh, fromKmh + E231.accelKmhPerSec * durationSec);
   const master = ctx.createGain();
   master.gain.setValueAtTime(0.0001, t0);
-  master.gain.linearRampToValueAtTime(0.06, t0 + 0.25);
+  master.gain.linearRampToValueAtTime(0.14, t0 + 0.25);
   master.gain.linearRampToValueAtTime(0.0001, t0 + durationSec);
   master.connect(ctx.destination);
   // 基本の音（のこぎり波）と、やや高い倍音（三角波）を重ねる
@@ -64,7 +74,7 @@ function playBrake(durationSec, fromKmh) {
   const osc = ctx.createOscillator(); osc.type = 'sawtooth';
   const g = ctx.createGain();
   g.gain.setValueAtTime(0.0001, t0);
-  g.gain.linearRampToValueAtTime(0.045, t0 + 0.3);
+  g.gain.linearRampToValueAtTime(0.10, t0 + 0.3);
   g.gain.linearRampToValueAtTime(0.0001, t0 + durationSec);
   osc.connect(g); g.connect(ctx.destination);
   const steps = Math.max(2, Math.floor(durationSec * E231.stepHz));
@@ -85,7 +95,7 @@ function playBrake(durationSec, fromKmh) {
   bp.frequency.linearRampToValueAtTime(700, t0 + durationSec);
   const gn = ctx.createGain();
   gn.gain.setValueAtTime(0.0001, t0);
-  gn.gain.linearRampToValueAtTime(0.05, t0 + durationSec * 0.6);
+  gn.gain.linearRampToValueAtTime(0.10, t0 + durationSec * 0.6);
   gn.gain.linearRampToValueAtTime(0.0001, t0 + durationSec);
   src.connect(bp); bp.connect(gn); gn.connect(ctx.destination);
   src.start(t0); src.stop(t0 + durationSec);
@@ -110,6 +120,7 @@ function playChime() {
 // 1コマの時間は、動作速度に合わせて短くなる。速度は実際の加速度から求める。
 function playPhaseSound(phase) {
   if (!SIM.sound) return;
+  if (audioCtx && audioCtx.state !== 'running') audioCtx.resume();
   const sec = 1.8 / SIM.speed;
   const kmh = 40; // 駅間の平均的な速度（表示用の代表値）
   if (phase === 'next') playVvvf(sec * 0.9, kmh * 0.4);
@@ -119,7 +130,16 @@ function playPhaseSound(phase) {
 
 function setSimSound(on) {
   SIM.sound = !!on;
-  if (SIM.sound) ensureAudio();
+  if (SIM.sound) {
+    const ctx = ensureAudio();
+    if (ctx) { // ONにしたことが分かる確認音
+      const t0 = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 880;
+      const gg = ctx.createGain(); gg.gain.setValueAtTime(0.0001, t0);
+      gg.gain.linearRampToValueAtTime(0.15, t0 + 0.02); gg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.25);
+      o.connect(gg); gg.connect(ctx.destination); o.start(t0); o.stop(t0 + 0.3);
+    }
+  }
   const btn = document.getElementById('simSoundBtn');
   if (btn) {
     btn.textContent = SIM.sound ? '走行音: ON' : '走行音: OFF';
