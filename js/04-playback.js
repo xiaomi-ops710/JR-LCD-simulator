@@ -121,7 +121,9 @@
     }
 
     /* 画面の自動切替の1コマ（動作速度に合わせて間隔が変わる） */
-    function autoPageTick() {
+    function autoPageTick(force) {
+          // 自動走行中は、到着のタイミングで切り替える（force のときだけ動かす）
+          if (state.autoRunActive && !force) return;
           let pages = ['straight', 'platform'];
           if (state.linePrefix === 'JY') {
             pages = ['curve_rtl', 'notice_info', 'loop', 'platform'];
@@ -136,33 +138,91 @@
     }
 
     /* 自動運転の1コマ（動作速度に合わせて間隔が変わる） */
+    /* 駅間の所要時間：時刻表の分差（mins）から決める。1分＝10秒に縮めて表示（動作速度は間隔にだけ効く） */
+    const SIM_SEC_PER_MIN = 10;
+    // 停車時間（秒）：駅ごとの指定（dwell）があればそれ。なければ乗換えのある駅は長く、普通の駅は短く。
+    function dwellSecFor(i) {
+      const st = state.stations[i];
+      if (!st) return 6;
+      if (typeof st.dwell === 'number') return st.dwell;
+      return (st.transfers && st.transfers.length) ? 12 : 6;
+    }
+    const SIM_TICK_SEC = 1.8;  // 1コマの時間（動作速度1倍）
+    function legTicksFor(i) {
+      const cur = state.stations[i];
+      const nxt = state.stations[i + 1];
+      const dt = (cur && nxt) ? Math.max(1, (nxt.mins || 0) - (cur.mins || 0)) : 2;
+      return Math.max(3, Math.round((dt * SIM_SEC_PER_MIN) / SIM_TICK_SEC));
+    }
+
+    /* 時計：自動運転中は、区間の所要時間と停車時間ぶんだけ進める（大まかな時刻） */
+    function parseClockMin(str) {
+      const m = /^(\d{1,2}):(\d{2})$/.exec(String(str || '').trim());
+      return m ? (Number(m[1]) * 60 + Number(m[2])) : 0;
+    }
+    function formatClock(min) {
+      const v = ((Math.round(min) % 1440) + 1440) % 1440;
+      return `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}`;
+    }
+    function legMinutes(i) {
+      const cur = state.stations[i], nxt = state.stations[i + 1];
+      return (cur && nxt) ? Math.max(1, (nxt.mins || 0) - (cur.mins || 0)) : 2;
+    }
+    function advanceClock(min) {
+      if (state.clockMode !== 'fixed') return;
+      SIM.clockMin += min;
+      state.manualClock = formatClock(SIM.clockMin);
+    }
+
+    /* 自動運転の1コマ：走行（区間の時間）→ 接近（ブレーキ・放送）→ 停車（停車時間）→ 次の区間 */
     function autoRunTick() {
-          state.trainProgress += 20;
-          if (state.trainProgress > 100) {
-            state.trainProgress = 0;
-            state.runningPhase = 'stopped';
-            if (state.currentStationIndex < state.stations.length - 2) {
-              state.currentStationIndex++;
-            } else {
-              state.currentStationIndex = 0;
-            }
-            syncPlatformEditorFields();
-          } else if (state.trainProgress >= 80) {
-            if (state.runningPhase !== 'arriving') {
-              state.runningPhase = 'arriving';
-              playAnnouncement();
-            }
+      if (SIM.dwellLeft > 0) {
+        SIM.dwellLeft--;
+        state.runningPhase = 'stopped';
+        if (SIM.dwellLeft === 0) {
+          advanceClock(SIM.dwellMinutes || 0.5);
+          SIM.legTicks = legTicksFor(state.currentStationIndex);
+          SIM.tick = 0;
+          state.trainProgress = 0;
+        }
+      } else {
+        if (!SIM.legTicks) SIM.legTicks = legTicksFor(state.currentStationIndex);
+        SIM.tick++;
+        state.trainProgress = Math.min(100, Math.round((SIM.tick * 100) / SIM.legTicks));
+        if (state.trainProgress >= 100) {
+          // 駅に到着：次の駅へ進み、停車時間に入る
+          advanceClock(legMinutes(state.currentStationIndex));
+          if (state.currentStationIndex < state.stations.length - 2) {
+            state.currentStationIndex++;
           } else {
-            state.runningPhase = 'next';
+            state.currentStationIndex = 0;
           }
-          document.getElementById('sliderTrainProgress').value = state.trainProgress;
-          document.getElementById('labelTrainProgress').textContent = `${state.trainProgress}%`;
-          renderLCD(true);
+          syncPlatformEditorFields();
+          state.runningPhase = 'stopped';
+          const dwellSec = dwellSecFor(state.currentStationIndex);
+          SIM.dwellLeft = Math.max(1, Math.round(dwellSec / SIM_TICK_SEC));
+          SIM.dwellMinutes = dwellSec / SIM_SEC_PER_MIN;
+          autoPageTick(true); // 到着したので、画面を切り替える
+          state.trainProgress = 100;
+        } else if (state.trainProgress >= 80) {
+          if (state.runningPhase !== 'arriving') {
+            state.runningPhase = 'arriving';
+            playAnnouncement();
+          }
+        } else {
+          state.runningPhase = 'next';
+        }
+      }
+      document.getElementById('sliderTrainProgress').value = state.trainProgress;
+      document.getElementById('labelTrainProgress').textContent = `${state.trainProgress}%`;
+      renderLCD(true);
       playPhaseSound(state.runningPhase);
     }
 
     function toggleAutoSimulation() {
       state.autoRunActive = !state.autoRunActive;
+      SIM.tick = 0; SIM.legTicks = 0; SIM.dwellLeft = 0;
+      SIM.clockMin = parseClockMin(state.manualClock);
       const btn = document.getElementById('btnAutoRun');
       const txt = document.getElementById('autoRunText');
 
@@ -242,7 +302,7 @@
 
 
 /* 動作速度（SIM.speed）：自動運転・画面切替の間隔を変える。動作中なら作り直す */
-const SIM = { speed: 1, sound: false };
+const SIM = { speed: 1, sound: false, tick: 0, legTicks: 0, dwellLeft: 0, clockMin: 0, dwellMinutes: 0 };
 function setSimSpeed(v) {
   SIM.speed = Math.max(0.5, Math.min(3, Number(v) || 1));
   const lbl = document.getElementById('simSpeedLabel');
