@@ -1,5 +1,5 @@
 {
- "version": "vis-sim-v6",
+ "version": "vis-sim-v7",
  "files": {
   "css/style.css": "22b545857c40698c",
   "css/tokens.css": "863f68970c35efe9",
@@ -7,7 +7,7 @@
   "icons/icon-192.png": "7572edc3ef460ed9",
   "icons/icon-512.png": "69462d2dfb8cce93",
   "icons/icon-maskable-512.png": "800d023366832adf",
-  "index.html": "ecc13be85793ad91",
+  "index.html": "df1cf082668e31e8",
   "js/01-data.js": "f901b2606c4338f9",
   "js/02-state.js": "26e77785698fd01d",
   "js/03-views.js": "216d93680167be19",
