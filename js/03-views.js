@@ -977,7 +977,9 @@
 
       const trHtml = trList.slice(0, 3).map(tr => {
         let iconHtml = '';
-        if (tr.badge === 'SOLID_GREY') {
+        if (tr.badge === 'SHINKANSEN_E' || tr.badge === 'SHINKANSEN_W') {
+          iconHtml = `<div class="w-[6.0cqw] h-[9.2cqh] rounded-[0.8cqw] flex items-center justify-center text-[3.2cqw] text-white" style="background:${tr.badgeColor || '#008c45'};">🚄</div>`;
+        } else if (tr.badge === 'SOLID_GREY') {
           iconHtml = `<div class="w-[6.0cqw] h-[8.8cqh] bg-[#7d7d7d]"></div>`;
         } else if (tr.badgeShape === 'circle') {
           iconHtml = `
@@ -995,8 +997,8 @@
         return `
           <div class="flex items-center gap-[1.2cqw]">
             ${iconHtml}
-            <div class="flex flex-col">
-              <span class="font-bold text-[#111827] text-[3.8cqw] leading-none">${tr.textJp.split('|').map(escapeHtml).join('<br>')}</span>
+            <div class="flex flex-col w-full min-w-0 overflow-hidden">
+              <span class="block font-bold text-[#111827] text-[3.8cqw] leading-none break-words">${tr.textJp.split('|').map(escapeHtml).join('<br>')}</span>
               <span class="font-['Roboto'] font-bold text-[#1e293b] text-[2.1cqw] leading-tight mt-[0.3cqh]">${escapeHtml(tr.textEn || '')}</span>
             </div>
           </div>
@@ -1069,7 +1071,7 @@
               <span class="font-bold text-[#111827] text-[2.65cqw] tracking-wide">のりかえ / Transfer</span>
             </div>
 
-            <div class="mt-[2.2cqh] flex items-center justify-center gap-[9.5cqw]">
+            <div class="mt-[2.2cqh] grid grid-cols-3 gap-x-[2.5cqw] w-full px-[2cqw] justify-items-start">
               ${trHtml}
             </div>
           </div>
