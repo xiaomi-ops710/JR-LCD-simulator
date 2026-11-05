@@ -519,12 +519,17 @@
       <div class="flex flex-wrap items-center gap-3 px-3 py-2 rounded-2xl border border-emerald-500/40 bg-emerald-950/30">
         <span class="text-[12px] font-bold text-emerald-300">自動走行の設定</span>
         <label class="flex items-center gap-2 text-[12px] text-slate-200">動作速度
-          <input type="range" min="0.5" max="3" step="0.1" value="1" class="w-36" oninput="setSimSpeed(this.value)" />
+          <input type="range" min="0.5" max="3" step="0.1" value="1" class="w-36" oninput="setSimSpeedSaved(this.value)" />
           <span id="simSpeedLabel" class="font-bold">1.0倍速</span>
         </label>
         <button id="simSoundBtn" class="m3-chip" onclick="setSimSound(!SIM.sound)">走行音: OFF</button>
-        <span class="text-[11px] text-slate-400">※走行音は、ボタンを押してから自動走行モードをONにすると鳴ります（iPadは消音スイッチもご確認ください）</span>
+        <button class="m3-chip" onclick="resetSavedSettings()">保存した設定を消す</button>
+        <span class="text-[11px] text-slate-400">※設定はこの端末に保存されます。走行音は、ボタンを押してから自動走行モードをONにすると鳴ります（iPadは消音スイッチもご確認ください）</span>
       </div>
+      <details class="rounded-2xl border border-slate-700 bg-slate-900/50 px-3 py-2">
+        <summary class="text-[12px] font-bold text-slate-200 cursor-pointer">駅ごとの設定（表示する画面・停車時間）</summary>
+        <div id="stopEditor" class="mt-2 max-h-64 overflow-y-auto"></div>
+      </details>
       <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5">
         <!-- STEP 2: SUB-SCENES / TRAINS FOR THE SELECTED LINE -->
       <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5">
@@ -902,6 +907,6 @@
   <script src="js/05-controls.js"></script>
   <script src="js/06-sound.js"></script>
   <script src="js/pwa.js"></script>
-  <div id="buildLabel" style="position:fixed;left:6px;bottom:2px;font-size:10px;color:#64748b;z-index:9999;pointer-events:none;">build v10</div>
+  <div id="buildLabel" style="position:fixed;left:6px;bottom:2px;font-size:10px;color:#64748b;z-index:9999;pointer-events:none;">build v14</div>
 </body>
 </html>

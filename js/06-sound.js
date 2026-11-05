@@ -27,7 +27,9 @@ function unlockAudioOnGesture() {
     const ctx = ensureAudio(); if (!ctx) return;
     const src = ctx.createBufferSource(); src.buffer = ctx.createBuffer(1, 1, 22050); src.connect(ctx.destination); src.start(0);
   };
-  ['touchend', 'pointerup', 'click', 'keydown'].forEach((ev) => document.addEventListener(ev, unlock, { passive: true }));
+  ['touchstart', 'touchend', 'pointerup', 'click', 'keydown'].forEach((ev) => document.addEventListener(ev, unlock, { passive: true }));
+  // 画面を閉じたり、他のアプリに切り替えたあとに、音声が止まることがあるので戻す
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && audioCtx && audioCtx.state !== 'running') audioCtx.resume(); });
 }
 unlockAudioOnGesture();
 

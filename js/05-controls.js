@@ -28,6 +28,81 @@
       btn.textContent = open ? '詳細設定を閉じる' : '詳細設定を開く（ホーム・駅一覧・時計など）';
     }
 
+
+
+    /* 設定の保存（この端末の中に保存する。路線ごとの駅の設定・動作速度・走行音） */
+    const SETTINGS_KEY = 'visSimSettings.v1';
+    function loadSettings() {
+      try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { stops: {} }; }
+      catch (e) { return { stops: {} }; }
+    }
+    function saveSettings(obj) {
+      try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(obj)); } catch (e) { /* 保存できない環境では何もしない */ }
+    }
+    function saveStopSettings() {
+      const cfg = loadSettings();
+      const key = state.activeLineKey || state.lineKey || 'JY';
+      cfg.stops = cfg.stops || {};
+      cfg.stops[key] = state.stations.map(st => ({ screen: st.screen || null, dwell: typeof st.dwell === 'number' ? st.dwell : null }));
+      saveSettings(cfg);
+    }
+    // 保存された駅の設定を、路線の表示に当てはめる
+    function applySavedStops() {
+      const cfg = loadSettings();
+      const key = state.activeLineKey || state.lineKey || 'JY';
+      const saved = cfg.stops && cfg.stops[key];
+      if (!saved) return;
+      state.stations.forEach((st, i) => {
+        const v = saved[i];
+        if (!v) return;
+        st.screen = v.screen || undefined;
+        st.dwell = typeof v.dwell === 'number' ? v.dwell : undefined;
+      });
+    }
+    function setSimSpeedSaved(v) {
+      setSimSpeed(v);
+      const cfg = loadSettings(); cfg.speed = SIM.speed; saveSettings(cfg);
+    }
+    function resetSavedSettings() {
+      try { localStorage.removeItem(SETTINGS_KEY); } catch (e) { /* 何もしない */ }
+      location.reload();
+    }
+
+    /* 駅ごとの設定：表示する画面（到着時）と停車時間（秒）を画面上で変える */
+    const STOP_SCREENS = [
+      ['', '（自動：路線の順番）'], ['loop', '環状ループ'], ['curve_rtl', 'カーブ（右→左）'], ['curve', 'カーブ（左→右）'],
+      ['straight', '直線バー'], ['platform', '停止位置'], ['notice_info', 'お知らせ'], ['sobu_rect', '総武線ブロック'],
+      ['chuo_stopping', '中央線種別図'], ['chuo_platform', '12両ホーム'], ['chuo_door', '大型ドア案内'],
+      ['chuo_transfer', 'のりかえ専用'], ['chuo_train_info', '運行情報']
+    ];
+    function setStationScreen(i, v) {
+      if (!state.stations[i]) return;
+      state.stations[i].screen = v || undefined;
+      saveStopSettings();
+    }
+    function setStationDwell(i, v) {
+      if (!state.stations[i]) return;
+      const n = Number(v);
+      state.stations[i].dwell = Number.isFinite(n) && v !== '' ? Math.max(0, Math.min(60, n)) : undefined;
+      saveStopSettings();
+    }
+    function renderStopEditor() {
+      const box = document.getElementById('stopEditor');
+      if (!box) return;
+      box.innerHTML = state.stations.map((st, i) => {
+        const screenOpts = STOP_SCREENS.map(([val, label]) =>
+          `<option value="${val}" ${(st.screen || '') === val ? 'selected' : ''}>${label}</option>`).join('');
+        const dwellVal = typeof st.dwell === 'number' ? st.dwell : '';
+        return `<div class="flex items-center gap-2 py-1 border-b border-slate-800/70 text-[12px]">
+          <span class="w-28 font-bold text-slate-200 truncate">${escapeHtml(st.nameJp)}</span>
+          <select class="m3-input !py-1 flex-1 min-w-0" onchange="setStationScreen(${i}, this.value)">${screenOpts}</select>
+          <label class="flex items-center gap-1 text-slate-300">停車
+            <input type="number" min="0" max="60" step="1" value="${dwellVal}" placeholder="自動" class="m3-input !py-1 w-20"
+              onchange="setStationDwell(${i}, this.value)" />秒
+          </label>
+        </div>`;
+      }).join('');
+    }
     /* 記録した選択を消して、路線の既定の表示に戻す */
     function resetLayoutPicks() {
       state.pickedLayout = null;
@@ -492,4 +567,14 @@
       node = node.parentElement;
     }
   });
+});
+
+// 起動時：保存しておいた動作速度を反映する
+window.addEventListener('load', () => {
+  const cfg = loadSettings();
+  if (cfg.speed) {
+    setSimSpeed(cfg.speed);
+    const slider = document.querySelector('input[oninput="setSimSpeedSaved(this.value)"]');
+    if (slider) slider.value = SIM.speed;
+  }
 });

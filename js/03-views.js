@@ -1416,6 +1416,7 @@
     }
 
     function selectLine(lineKey, subSceneId = null) {
+      if (typeof renderStopEditor === 'function') setTimeout(renderStopEditor, 0);
       closeEmergencyStop();
       closeTrainInfoScreen();
       state.activeLineKey = lineKey;
@@ -1433,6 +1434,8 @@
 
       renderSubSceneChips();
       applySubScene(targetSubId);
+      if (typeof applySavedStops === 'function') applySavedStops();
+      if (typeof renderStopEditor === 'function') setTimeout(renderStopEditor, 0);
     }
 
     function renderSubSceneChips() {

@@ -203,6 +203,12 @@
           SIM.dwellLeft = Math.max(1, Math.round(dwellSec / SIM_TICK_SEC));
           SIM.dwellMinutes = dwellSec / SIM_SEC_PER_MIN;
           autoPageTick(true); // 到着したので、画面を切り替える
+          // 駅ごとに決めた画面（駅データの screen）があれば、それを優先する
+          const arrivedSt = state.stations[state.currentStationIndex];
+          if (arrivedSt && arrivedSt.screen) {
+            state.bodyLayout = arrivedSt.screen;
+            renderLCD(false);
+          }
           state.trainProgress = 100;
         } else if (state.trainProgress >= 80) {
           if (state.runningPhase !== 'arriving') {
