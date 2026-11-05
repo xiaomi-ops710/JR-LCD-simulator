@@ -1,19 +1,20 @@
 {
- "version": "vis-sim-v15",
+ "version": "vis-sim-v19",
  "files": {
+  "css/m3.css": "5ca592958b18ddb7",
   "css/style.css": "22b545857c40698c",
   "css/tokens.css": "863f68970c35efe9",
   "icons/apple-touch-icon.png": "f7b26e7ad9fa451a",
   "icons/icon-192.png": "7572edc3ef460ed9",
   "icons/icon-512.png": "69462d2dfb8cce93",
   "icons/icon-maskable-512.png": "800d023366832adf",
-  "index.html": "719bd3928af84ea2",
+  "index.html": "284f9ee7e2144b51",
   "js/01-data.js": "f901b2606c4338f9",
   "js/02-state.js": "26e77785698fd01d",
-  "js/03-views.js": "fb7baea3fb9e6e45",
-  "js/04-playback.js": "4d540a8a634baf33",
-  "js/05-controls.js": "57a80a2f3ebdfc03",
-  "js/06-sound.js": "43cf8260839def7b",
+  "js/03-views.js": "b9862ddfbc6a2f96",
+  "js/04-playback.js": "d80581cbc7d93283",
+  "js/05-controls.js": "eb9806aa8f9f5ee9",
+  "js/06-sound.js": "95a950e1b1e90d41",
   "js/pwa.js": "042e4812edf7c13c",
   "manifest.json": "98c7a596add3ebb2"
  }

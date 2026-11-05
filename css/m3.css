@@ -1,0 +1,161 @@
+/* ==========================================================
+   Material 3 の見た目（色・角丸・ボタン・入力欄・状態の表示）
+   色は tokens.css の変数を使う。部品の構造は変えず、見た目だけをそろえる。
+   ========================================================== */
+:root {
+  --md-surface: #0f1419;
+  --md-surface-container: #1a2028;
+  --md-surface-container-high: #222a34;
+  --md-on-surface: #e6e9ef;
+  --md-on-surface-variant: #a9b2bf;
+  --md-outline: #3a4452;
+  --md-primary: #8fd46a;
+  --md-on-primary: #0b1a05;
+  --md-primary-container: #24401a;
+  --md-on-primary-container: #cdeeb4;
+  --md-error: #ffb4ab;
+  --md-radius-s: 8px;
+  --md-radius-m: 16px;
+  --md-radius-l: 28px;
+  --md-radius-full: 9999px;
+  --md-elevation-1: 0 1px 2px rgba(0,0,0,.35), 0 1px 3px rgba(0,0,0,.25);
+  --md-elevation-2: 0 2px 6px rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.3);
+  --md-state-hover: rgba(230,233,239,.08);
+  --md-state-pressed: rgba(230,233,239,.14);
+  --md-focus-ring: 0 0 0 2px var(--md-primary);
+}
+
+html, body {
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+  font-family: 'Roboto', 'Noto Sans JP', 'BIZ UDPGothic', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* フォーカス（キーボード操作）の表示 */
+button:focus-visible, input:focus-visible, select:focus-visible, [role="button"]:focus-visible {
+  outline: none;
+  box-shadow: var(--md-focus-ring);
+}
+
+/* ボタン（塗りつぶし・ツールバー用の色つき） */
+.m3-btn-filled {
+  border-radius: var(--md-radius-full);
+  min-height: 40px;
+  padding: 0 18px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  box-shadow: var(--md-elevation-1);
+  transition: background-color .15s ease, box-shadow .15s ease, transform .05s ease;
+}
+.m3-btn-filled:hover { box-shadow: var(--md-elevation-2); }
+.m3-btn-filled:active { transform: scale(.98); }
+
+/* ボタン（ tonal：控えめな面の色 ） */
+.m3-btn-tonal {
+  border-radius: var(--md-radius-full);
+  min-height: 40px;
+  padding: 0 16px;
+  font-weight: 600;
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface);
+  transition: background-color .15s ease, transform .05s ease;
+}
+.m3-btn-tonal:hover { background: color-mix(in srgb, var(--md-surface-container-high) 88%, var(--md-on-surface) 12%); }
+.m3-btn-tonal:active { transform: scale(.98); }
+
+/* チップ（選択されたものを、面の色で示す） */
+.m3-chip {
+  border-radius: var(--md-radius-s);
+  border: 1px solid var(--md-outline);
+  padding: 6px 12px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+}
+.m3-chip:hover { background: var(--md-state-hover); color: var(--md-on-surface); }
+.m3-chip.active,
+.m3-chip[aria-selected="true"] {
+  background: var(--md-primary-container);
+  border-color: transparent;
+  color: var(--md-on-primary-container);
+}
+
+/* 分割ボタン（表示画面モードなど） */
+.m3-seg-btn {
+  border-radius: var(--md-radius-full);
+  padding: 6px 14px;
+  font-weight: 600;
+  color: var(--md-on-surface-variant);
+  transition: background-color .15s ease, color .15s ease;
+}
+.m3-seg-btn:hover { background: var(--md-state-hover); color: var(--md-on-surface); }
+.m3-seg-btn.active {
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+/* 入力欄（塗りつぶし型） */
+.m3-input {
+  border-radius: var(--md-radius-s) var(--md-radius-s) 0 0;
+  background: var(--md-surface-container-high);
+  border: none;
+  border-bottom: 1px solid var(--md-on-surface-variant);
+  color: var(--md-on-surface);
+  padding: 8px 12px;
+}
+.m3-input:focus { border-bottom: 2px solid var(--md-primary); outline: none; }
+
+/* 面（カードや操作パネル） */
+.m3-surface {
+  background: var(--md-surface-container);
+  border-radius: var(--md-radius-l);
+  box-shadow: var(--md-elevation-1);
+}
+
+/* 路線カード */
+.line-card-btn {
+  border-radius: var(--md-radius-m);
+  background: var(--md-surface-container);
+  border: 1px solid var(--md-outline);
+  transition: background-color .15s ease, border-color .15s ease;
+}
+.line-card-btn:hover { background: var(--md-surface-container-high); }
+.line-card-btn.active {
+  background: var(--md-primary-container);
+  border-color: var(--md-primary);
+}
+
+/* 区切り線 */
+hr, .m3-divider { border: 0; border-top: 1px solid var(--md-outline); }
+
+/* ----------------------------------------------------------
+   全画面（LCDだけを表示）
+   ---------------------------------------------------------- */
+#lcdFullHost {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+body.lcd-only > *:not(#lcdFullHost):not(#exitFullscreenBtn):not(script) { display: none !important; }
+body.lcd-only #lcdFullHost .lcd-bezel-wrapper {
+  width: min(100vw, calc(100vh * 16 / 9));
+}
+body.lcd-only #exitFullscreenBtn {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 200;
+  border-radius: var(--md-radius-full);
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface);
+  box-shadow: var(--md-elevation-2);
+}
+
+/* 隠れているときは、画面を覆わないように必ず非表示にする */
+#lcdFullHost.hidden { display: none !important; }

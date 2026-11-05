@@ -467,25 +467,37 @@
       document.getElementById('themeIcon').textContent = isLight ? 'dark_mode' : 'light_mode';
     }
 
+    /* 全画面：LCDの枠だけを画面いっぱいに表示する（ほかのボタン・表示は隠す） */
+    let lcdHome = null; // LCDの枠を戻す場所（元の親と、次の要素）
     function toggleFullscreenDisplay() {
       state.isFullscreen = !state.isFullscreen;
-      const toolbar = document.getElementById('appToolbar');
-      const quickStrip = document.getElementById('quickControlStrip');
-      const deck = document.getElementById('controlDeck');
+      const bezel = document.querySelector('.lcd-bezel-wrapper');
+      const host = document.getElementById('lcdFullHost');
       const exitBtn = document.getElementById('exitFullscreenBtn');
-
+      if (!bezel || !host) return;
       if (state.isFullscreen) {
-        toolbar.classList.add('hidden');
-        quickStrip.classList.add('hidden');
-        deck.classList.add('hidden');
+        lcdHome = { parent: bezel.parentNode, next: bezel.nextSibling };
+        host.appendChild(bezel);
+        document.body.classList.add('lcd-only');
+        host.classList.remove('hidden');
         exitBtn.classList.remove('hidden');
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
       } else {
-        toolbar.classList.remove('hidden');
-        quickStrip.classList.remove('hidden');
-        deck.classList.remove('hidden');
+        if (lcdHome) lcdHome.parent.insertBefore(bezel, lcdHome.next);
+        document.body.classList.remove('lcd-only');
+        host.classList.add('hidden');
         exitBtn.classList.add('hidden');
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
       }
     }
+    // 端末の全画面を、Escなどで抜けたときも表示を戻す
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && state.isFullscreen) toggleFullscreenDisplay();
+    });
 
     function switchTab(tabKey) {
       ['presets', 'platform', 'stations', 'visual'].forEach(k => {

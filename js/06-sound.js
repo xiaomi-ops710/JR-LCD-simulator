@@ -144,7 +144,7 @@ function setSimSound(on) {
   }
   const btn = document.getElementById('simSoundBtn');
   if (btn) {
-    btn.textContent = SIM.sound ? '走行音: ON' : '走行音: OFF';
+    btn.textContent = SIM.sound ? '音を鳴らす: ON' : '音を鳴らす: OFF';
     btn.className = SIM.sound ? 'm3-chip active' : 'm3-chip';
   }
 }

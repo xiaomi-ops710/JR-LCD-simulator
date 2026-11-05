@@ -998,8 +998,8 @@
           <div class="flex items-center gap-[1.2cqw]">
             ${iconHtml}
             <div class="flex flex-col w-full min-w-0 overflow-hidden">
-              <span class="block font-bold text-[#111827] text-[3.8cqw] leading-none break-words">${tr.textJp.split('|').map(escapeHtml).join('<br>')}</span>
-              <span class="font-['Roboto'] font-bold text-[#1e293b] text-[2.1cqw] leading-tight mt-[0.3cqh]">${escapeHtml(tr.textEn || '')}</span>
+              <span class="block font-bold text-[#111827] text-[2.1cqw] leading-tight break-words">${tr.textJp.split('|').map(escapeHtml).join('<br>')}</span>
+              <span class="font-['Roboto'] font-bold text-[#1e293b] text-[1.5cqw] leading-tight mt-[0.2cqh]">${escapeHtml(tr.textEn || '')}</span>
             </div>
           </div>
         `;
@@ -1071,7 +1071,7 @@
               <span class="font-bold text-[#111827] text-[2.65cqw] tracking-wide">のりかえ / Transfer</span>
             </div>
 
-            <div class="mt-[2.2cqh] grid grid-cols-3 gap-x-[2.5cqw] w-full px-[2cqw] justify-items-start">
+            <div class="mt-[1.2cqh] grid grid-cols-3 gap-x-[2.5cqw] w-full px-[2cqw] justify-items-start">
               ${trHtml}
             </div>
           </div>
