@@ -159,3 +159,6 @@ body.lcd-only #exitFullscreenBtn {
 
 /* 隠れているときは、画面を覆わないように必ず非表示にする */
 #lcdFullHost.hidden { display: none !important; }
+
+/* 隠す指定（hidden）は、flex などの表示指定より必ず優先する */
+.hidden { display: none !important; }

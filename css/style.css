@@ -1030,8 +1030,12 @@
   right: 1.2cqw;
   top: 0.15cqh;
 }
-.clock-group { max-width: 56cqw; }
+.clock-group { max-width: 44cqw; }
 /* 隠す指定（hidden）を、号車表示の指定より優先させる */
 .car-badge-group.hidden,
 .car-pillar-group.hidden,
 .clock-group.hidden { display: none !important; }
+
+/* 英語表示では、時計のラベルが長いので、文字を少し小さくして号車の表示と重ならないようにする */
+.clock-group { gap: 0.6cqw; }
+.clock-group > * { font-size: 0.9em; }

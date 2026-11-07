@@ -488,37 +488,40 @@
     <!-- 操作ボタン・列車/場面（LCDの直下） -->
     <div class="w-full mt-3 flex flex-col gap-2">
       <!-- Material 3 Action Buttons -->
-      <div class="flex flex-wrap items-center gap-1.5">
-        <button id="btnVideoDemo" data-click="toggleVideoSequenceDemo" data-click-args='[]' class="m3-btn-filled bg-amber-500 hover:bg-amber-400 text-slate-950 shadow" title="動画・実写と同じ順序で画面と放送を自動進行します">
-          <span class="material-symbols-rounded">movie</span>
-          <span id="videoDemoText">実車シーケンス再生: OFF</span>
-        </button>
-
-        <button id="btnAutoRun" data-click="toggleAutoSimulation" data-click-args='[]' class="m3-btn-filled bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow">
+      <!-- 操作バー：よく使う操作だけを常に表示する -->
+      <div class="flex flex-wrap items-center gap-2" role="toolbar" aria-label="操作">
+        <button id="btnAutoRun" data-click="toggleAutoSimulation" data-click-args='[]' class="m3-btn-filled bg-emerald-500 hover:bg-emerald-400 text-slate-950">
           <span class="material-symbols-rounded">directions_subway</span>
           <span id="autoRunText">自動運転: OFF（押すと始まります）</span>
         </button>
-
-        <button data-click="playAnnouncement" data-click-args='[]' class="m3-btn-tonal" title="チャイム＆自動放送 (日・英)">
-          <span class="material-symbols-rounded">campaign</span>
-          <span>車内放送</span>
-        </button>
-
-        <button data-click="triggerEmergencyStop" data-click-args='[]' class="m3-btn-filled bg-red-600 hover:bg-red-500 text-white shadow" title="急停車全画面警告を表示">
-          <span class="material-symbols-rounded">emergency_home</span>
-          <span>急停車</span>
-        </button>
-
-        <button data-click="toggleThemeMode" data-click-args='[]' class="m3-btn-tonal !px-2.5" title="ダーク/ライトテーマ切替">
-          <span id="themeIcon" class="material-symbols-rounded">light_mode</span>
-        </button>
-
-        <button data-click="toggleFullscreenDisplay" data-click-args='[]' class="m3-btn-tonal !px-2.5" title="モニター全画面表示">
+        <button data-click="toggleFullscreenDisplay" data-click-args='[]' class="m3-btn-tonal" title="LCDだけを全画面で表示">
           <span class="material-symbols-rounded">fullscreen</span>
+          <span>全画面</span>
+        </button>
+        <button id="menuToggle" data-click="toggleMoreMenu" data-click-args='[]' class="m3-btn-tonal" aria-expanded="false" aria-controls="moreMenu">
+          <span class="material-symbols-rounded">tune</span>
+          <span>メニュー（音・速さ・その他）</span>
         </button>
       </div>
-      <section class="rounded-2xl border border-emerald-500/40 bg-emerald-950/30 p-3 flex flex-col gap-3">
-        <h2 class="text-[14px] font-bold text-emerald-300">自動運転の設定</h2>
+
+      <!-- メニュー：たまに使う操作を、まとめて開閉する -->
+      <section id="moreMenu" class="hidden rounded-2xl border border-slate-700 bg-slate-900/60 p-3 flex flex-col gap-3" aria-label="メニュー">
+        <div class="flex flex-col gap-1">
+          <h3 class="text-[12px] font-bold text-slate-200">実際の運行</h3>
+          <div class="flex flex-wrap gap-2">
+            <button id="btnVideoDemo" data-click="toggleVideoSequenceDemo" data-click-args='[]' class="m3-btn-tonal"><span class="material-symbols-rounded">movie</span><span id="videoDemoText">実車シーケンス再生: OFF</span></button>
+            <button data-click="playAnnouncement" data-click-args='[]' class="m3-btn-tonal"><span class="material-symbols-rounded">campaign</span><span>車内放送を流す</span></button>
+            <button data-click="triggerEmergencyStop" data-click-args='[]' class="m3-btn-tonal"><span class="material-symbols-rounded">emergency_home</span><span>急停車</span></button>
+          </div>
+        </div>
+        <div class="flex flex-col gap-1">
+          <h3 class="text-[12px] font-bold text-slate-200">見た目</h3>
+          <div class="flex flex-wrap gap-2">
+            <button data-click="toggleThemeMode" data-click-args='[]' class="m3-btn-tonal"><span class="material-symbols-rounded">light_mode</span><span>明るさを切り替える</span></button>
+          </div>
+        </div>
+      <section class="flex flex-col gap-3 pt-2 border-t border-slate-700">
+        <h3 class="text-[12px] font-bold text-slate-200">自動運転の設定</h3>
         <p class="text-[12px] text-slate-300">列車が駅ごとに自動で進むモードです。上の「自動運転」ボタンで始めたり止めたりします。</p>
 
         <div class="flex flex-col gap-1">
@@ -548,6 +551,8 @@
           <p class="text-[11px] text-slate-400">この端末に保存された、駅ごとの設定と進む速さを消して、最初の状態に戻します。</p>
         </div>
       </section>
+      </section>
+
       <details class="rounded-2xl border border-slate-700 bg-slate-900/50 px-3 py-2">
         <summary class="text-[13px] font-bold text-slate-200 cursor-pointer">駅ごとの設定（その駅で表示する画面と、停まる時間）</summary>
         <p class="text-[11px] text-slate-400 mt-1">表示する画面は、その駅に着いたときに切り替わります。停まる時間は秒で入れます（空欄なら自動）。</p>
@@ -931,6 +936,6 @@
   <div id="lcdFullHost" class="hidden"></div>
   <script src="js/06-sound.js"></script>
   <script src="js/pwa.js"></script>
-  <div id="buildLabel" style="position:fixed;left:6px;bottom:2px;font-size:10px;color:#64748b;z-index:9999;pointer-events:none;">build v19</div>
+  <div id="buildLabel" style="position:fixed;left:6px;bottom:2px;font-size:10px;color:#64748b;z-index:9999;pointer-events:none;">build v21</div>
 </body>
 </html>

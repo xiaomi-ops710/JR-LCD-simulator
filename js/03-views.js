@@ -1591,8 +1591,10 @@
           step++;
         };
 
-        runStep();
-        videoDemoInterval = setInterval(runStep, 5200);
+        // 各コマの最後で、プリセットの読み込みで消えた「再生中」の印を戻す
+        const runStepKeep = () => { runStep(); state.videoDemoActive = true; };
+        runStepKeep();
+        videoDemoInterval = setInterval(runStepKeep, 5200);
       } else {
         btn.className = 'm3-btn-filled bg-amber-500 hover:bg-amber-400 text-slate-950 shadow';
         txt.textContent = '実車シーケンス再生: OFF';

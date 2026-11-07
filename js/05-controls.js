@@ -19,6 +19,15 @@
       renderLCD(false);
     }
 
+    /* メニュー（音・速さ・その他）の開閉 */
+    function toggleMoreMenu() {
+      const menu = document.getElementById('moreMenu');
+      const btn = document.getElementById('menuToggle');
+      const open = menu.classList.contains('hidden');
+      menu.classList.toggle('hidden', !open);
+      btn.setAttribute('aria-expanded', String(open));
+    }
+
     /* 詳細設定の開閉（通常は閉じておく） */
     function toggleAdvancedPanel() {
       const deck = document.getElementById('controlDeck');
